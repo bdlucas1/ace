@@ -1,0 +1,111 @@
+html, body {
+    width: 100vw;
+    height: 0vh;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    max-width: 500px;
+    max-height: 800px;
+    margin: 0;
+    background: #003300;
+}
+
+#layout {
+    padding: 0.8em;
+    height: 100%;
+    display: grid;
+    box-sizing: border-box;
+    grid-template-rows: 1fr auto auto auto;
+    grid-template-columns: auto auto 1fr;
+    gap: 1em;
+}
+
+#map {
+    width: 100%;
+    grid-row: 1;
+    grid-column: 1 / 4;
+}
+
+#layer {
+    justify-self: right;
+}
+
+#plus, #minus, #layer {
+    display: inline-block;
+    grid-row: 2;
+    aspect-ratio: 1 / 1;
+    border: 1px solid gray;
+    text-align: center;
+    border-radius: 20px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 40px;
+    background: rgba(255,255,255,0.8);
+}
+
+#plus, #minus {
+    font-weight: bold
+}
+
+#plus::before {
+    content: "+";
+}
+
+#minus::before {
+    content: "−";
+}
+
+#layer::before {
+    content: "❖";
+}
+
+#minus {
+    grid-row: 2;
+}
+
+#next {
+    grid-row: 2;
+}
+
+#scorecard {
+    grid-row: 3;
+    grid-column: 1 / 4;
+}
+
+table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+table, td {
+    border: 1px solid gray;
+    border-collapse: collapse;
+    text-align: center;
+    height: 1lh;
+}
+
+#hole-number {
+    font-family: sans-serif;
+    font-style: italic;
+    font-size: 16px;
+}
+
+#hole-score {
+    font-family: sans-serif;
+    font-size: 24px;
+    height: 1.5lh;
+}
+
+#hole-number, #hole-score {
+    color: white;
+
+}
+
+tr#hole-number td.selected {
+    background: #ffdd88;
+    color: black;
+}
+
+
+
+
+

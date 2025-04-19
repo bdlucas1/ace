@@ -10,6 +10,7 @@ var map
 var holeFeatures = []
 var selectedHoleLayer
 var selectedHole
+var baseMaps
 
 // set up our map using Leaflet
 function loadMap(elt, layerControl = true, locateControl = false) {
@@ -62,9 +63,9 @@ function loadMap(elt, layerControl = true, locateControl = false) {
     const baseMaps = {
         "OSM": OSM(),
         "MapTiler satellite": mapTiler(),
+        "MapBox satellite": mapBox("mapbox/satellite-streets-v12"),
         "Thunderforest landscape": thunderForest("landscape"),
         "MapBox outdoors": mapBox("mapbox/outdoors-v12"),
-        "MapBox satellite": mapBox("mapbox/satellite-streets-v12"),
         "MapBox custom": mapBox("bdlucas1/ckyqokvgx03so14kg7zgkvfsd"),
         "USGS topo": USGS("USGSTopo"),
         "USGS imagery": USGS("USGSImageryOnly"),
@@ -72,11 +73,25 @@ function loadMap(elt, layerControl = true, locateControl = false) {
     }
 
     // create the map
-    map = L.map(elt, {rotate: true, layers: Object.values(baseMaps)[0], zoomSnap: 0.1})
-    if (layerControl)
-        L.control.layers(baseMaps).addTo(map)
-    map.setView(latlon, 15)
+    var currentLayerNumber = 0
+    map = L.map(elt, {
+        rotate: true,
+        zoomSnap: 0.1,
+        zoomControl: false,
+        rotateControl: false,
+        layers: Object.values(baseMaps)[currentLayerNumber],
+    })
 
+    // our own layer switcher
+    document.querySelector("#layer").addEventListener("click", () => {
+        map.removeLayer(Object.values(baseMaps)[currentLayerNumber])
+        currentLayerNumber = (currentLayerNumber + 1) % 3 // TODO
+        print("switching to layer", currentLayerNumber)
+        map.addLayer(Object.values(baseMaps)[currentLayerNumber])
+    })
+
+
+    // TODO: add location marker. don't need button to enable though...
     // a marker to track our location
     var locationMarker = undefined
     var lastLoc
@@ -124,7 +139,7 @@ function loadMap(elt, layerControl = true, locateControl = false) {
                 return button;
             }
         });
-        map.addControl(new LocateButton());
+        //map.addControl(new LocateButton());
     }
 }
 
@@ -168,7 +183,6 @@ async function selectHole(holeNumber) {
     document.querySelector(`#hole-number-${selectedHole}`).classList.add("selected")
     document.querySelector(`#hole-score-${selectedHole}`).classList.add("selected")
     
-
 }
 
 

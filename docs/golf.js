@@ -38,7 +38,7 @@ function loadMap(elt, layerControl = true, locateControl = false) {
             ©<a href='https://www.mapbox.com' target='_blank'>MapBox</a> |
             ©<a href='https://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap</a>
         `
-        return L.tileLayer(url, {attribution, style, token})
+        return L.tileLayer(url, {attribution, style, token, maxZoom: 20})
     }
 
     // USGS top maps

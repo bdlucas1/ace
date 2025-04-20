@@ -221,6 +221,8 @@ function manageLocation() {
                 print,
                 {enableHighAccuracy: true}
             )
+            for (const marker of markers)
+                marker.remove()
             markers = [locationMarker]
         }
         if (lastLoc)

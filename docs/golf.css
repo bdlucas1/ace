@@ -50,7 +50,7 @@ html, body {
 #minus::before {content: "−"; font-weight: bold;}
 #layer::before {content: "❖";}
 
-#locate img {height: 65%;}
+#locate img {height: 85%;}
 
 #scorecard {
 

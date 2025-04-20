@@ -191,18 +191,19 @@ const CrosshairIcon = defineIcon(30, 30, "crosshair.png")
 function manageLocation() {
 
     var locationMarker = undefined
+    var accuracyMarker = undefined
     var lastLoc
     var markers = []
     const polyline = L.polyline([]).addTo(map)
 
     function moveLocationMarker(loc, center) {
         const latlon = [loc.coords.latitude, loc.coords.longitude]
-        print("moving location marker to", latlon, "centering", center)
+        print("moving location marker to", latlon, "centering", center, "accuracy", loc.coords.accuracy, "m")
         locationMarker.setLatLng(latlon)
-        if (center) {
+        accuracyMarker.setLatLng(latlon)
+        accuracyMarker.setRadius(loc.coords.accuracy)
+        if (center)
             map.setView(latlon)
-            map.setBearing(0) // XXX
-        }
         lastLoc = loc
         updateLine()
     }
@@ -210,6 +211,11 @@ function manageLocation() {
     function updateLocation() {
         if (!locationMarker) {
             locationMarker = L.marker([0,0], {icon: new CrosshairIcon()}).addTo(map)
+            accuracyMarker = L.circleMarker([0,0], {
+                radius: 100,
+                color: "blue", opacity: 0.3,
+                fillColor: "blue", fillOpacity: 0.1,
+            }).addTo(map)
             navigator.geolocation.watchPosition((loc) => moveLocationMarker(loc, false))
             markers = [locationMarker]
         }

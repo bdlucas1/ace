@@ -1,101 +1,79 @@
 html, body {
     width: 100vw;
+    max-width: 500px;
     height: 0vh;
     min-height: 100vh;
     min-height: -webkit-fill-available;
-    max-width: 500px;
     max-height: 800px;
     margin: 0;
     background: #003300;
 }
 
 #layout {
-    padding: 0.8em;
+
     height: 100%;
+    padding: 0.8em;
+
     display: grid;
-    box-sizing: border-box;
-    grid-template-rows: auto auto 1fr;
-    grid-template-columns: auto auto 1fr;
     gap: 1em;
-}
+    box-sizing: border-box;
 
-#map {
-    width: 100%;
-    grid-row: 3;
-    grid-column: 1 / 4;
-}
-
-#layer {
-    justify-self: right;
+    /* rows and columns */
+    grid-template-rows: auto auto 1fr;
+    grid-template-columns: auto 1fr auto auto;
+    #layer {grid-row: 1; grid-column: 1;}
+    #minus {grid-row: 1; grid-column: 3;}
+    #plus {grid-row: 1; grid-column: 4;}
+    #scorecard {grid-row: 2; grid-column: 1 / -1;}
+    #map {grid-row: 3; grid-column: 1 / -1;}
 }
 
 #plus, #minus, #layer {
-    display: inline-block;
-    grid-row: 1;
     aspect-ratio: 1 / 1;
-    border: 1px solid gray;
-    text-align: center;
-    border-radius: 20px;
     height: 40px;
     line-height: 40px;
     font-size: 40px;
-    background: rgba(255,255,255,0.8);
-}
-
-#plus, #minus {
-    font-weight: bold
-}
-
-#plus::before {
-    content: "+";
-}
-
-#minus::before {
-    content: "−";
-}
-
-#layer::before {
-    content: "❖";
-}
-
-#scorecard {
-    grid-row: 2;
-    grid-column: 1 / 4;
-}
-
-table {
-    width: 100%;
-    table-layout: fixed;
-}
-
-table, td {
+    border-radius: 20px;
     border: 1px solid gray;
-    border-collapse: collapse;
     text-align: center;
-    height: 1lh;
-}
-
-#hole-number {
-    font-family: sans-serif;
-    font-style: italic;
-    font-size: 16px;
-}
-
-#hole-score {
-    font-family: sans-serif;
-    font-size: 24px;
-    height: 1.5lh;
-}
-
-#hole-number, #hole-score {
-    color: white;
-
-}
-
-tr#hole-number td.selected {
-    background: #ffdd88;
+    background: rgba(255,255,255,0.8);
     color: black;
 }
+
+#plus::before {content: "+"; font-weight: bold;}
+#minus::before {content: "−"; font-weight: bold;}
+#layer::before {content: "❖";}
+
+#scorecard {
+
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+
+    td {
+        color: white;
+        border: 1px solid gray;
+        text-align: center;
+    }
+
+    #hole-number {
+        font-family: sans-serif;
+        font-style: italic;
+        font-size: 16px;
+    }
+    
+    #hole-score {
+        font-family: sans-serif;
+        font-size: 24px;
+        height: 1.5lh;
+    }
+    
+    #hole-number td.selected {
+        background: #ffdd88;
+        color: black;
+    }
+}
+
 
 
 

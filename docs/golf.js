@@ -234,31 +234,62 @@ function manageLocation() {
         updateLine()
     }
 
+    // draw a line connecting markers and update distance info
     function updateLine() {
+
+        // update the line        
         const lls = markers.map(m => m.getLatLng())
         polyline.setLatLngs(lls)
+
+        // update the distance info
+        for (var i = 1; i < markers.length; i++) {
+            // Assuming you have two Leaflet markers, marker1 and marker2
+            const {lat: lat1, lng: lng1} = markers[i-1].getLatLng()
+            const {lat: lat2, lng: lng2} = markers[i].getLatLng()
+            const point1 = turf.point([lng1, lat1]);
+            const distance = turf.distance(turf.point([lng1,lat1]), turf.point([lng2,lat2]), {units: "yards"})
+            markers[i].setTooltipContent(Math.round(distance) + " yd")
+        }
     }
+
+    // clicking on map adds a marker
     map.on("click", function(e) {
+
         print("click map")
+
+        // create marker
         const marker = L.marker(e.latlng, {
             icon: new CrosshairIcon(),
             draggable: true,
             autoPanOnFocus: false, // https://github.com/Raruto/leaflet-rotate/issues/28
         }).addTo(map)
         markers.push(marker)
+
+        // create tooltip for associated distance info box
+        if (markers.length > 1) {
+            marker.bindTooltip("", {
+                permanent: true,
+                direction: "right",
+                offset: L.point([20, 0]),
+                className: "distance-info"
+            })
+        }
+
+        // redraw line and update distance info
         updateLine()
+
+        // clicking marker removes it
         marker.on("click", () => {
             print("click marker")
-            markers = markers.filter(m => m !== marker)
             marker.remove()
+            markers = markers.filter(m => m !== marker)
             updateLine()
         })
+
+        // dragging marker updates line
         marker.on("drag", (e) => {
             print("drag")
             updateLine()
-        })
-        marker.on("dragend", (e) => {
-            print("dragend")
         })
     })
 

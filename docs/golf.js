@@ -216,13 +216,21 @@ function manageLocation() {
                 color: "blue", opacity: 0.3,
                 fillColor: "blue", fillOpacity: 0.1,
             }).addTo(map)
-            navigator.geolocation.watchPosition((loc) => moveLocationMarker(loc, false))
+            navigator.geolocation.watchPosition(
+                (loc) => moveLocationMarker(loc, false),
+                print,
+                {enableHighAccuracy: true}
+            )
             markers = [locationMarker]
         }
         if (lastLoc)
             moveLocationMarker(lastLoc, true)
         else
-            navigator.geolocation.getCurrentPosition((loc) => moveLocationMarker(loc, true))
+            navigator.geolocation.getCurrentPosition(
+                (loc) => moveLocationMarker(loc, true),
+                print,
+                {enableHighAccuracy: true}
+            )
         updateLine()
     }
 

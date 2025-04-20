@@ -5,7 +5,6 @@ const printj = (j) => print(JSON.stringify(j, null, 2))
 
 const latlon = [41.32035685669253, -73.89382235173484]
 
-var course
 var map
 var holeFeatures = []
 var selectedHoleLayer
@@ -91,59 +90,7 @@ function loadMap(elt, layerControl = true, locateControl = false) {
     })
 
 
-    // TODO: add location marker. don't need button to enable though...
-    // a marker to track our location
-    var locationMarker = undefined
-    var lastLoc
-    function createLocationMarker() {
-        print("creating location marker")
-        var CrosshairIcon = L.Icon.extend({
-            options: {
-                iconSize:     [30, 30],
-                iconAnchor:   [15, 15],
-            }
-        });
-        const crosshairIcon = new CrosshairIcon({iconUrl: "crosshair.png"})
-        locationMarker = L.marker([0,0], {icon: crosshairIcon}).addTo(map)
-    }
-    function moveLocationMarker(loc, center) {
-        const latlon = [loc.coords.latitude, loc.coords.longitude]
-        print("moving location marker to", latlon, "centering", center)
-        locationMarker.setLatLng(latlon)
-        if (center)
-            map.setView(latlon)
-        lastLoc = loc
-    }
-
-    // TODO: sadly, this doesn't seem to work embedded in TNH website because
-    // of permission policy issue - I think this is controlled at iframe level,
-    // but could also be at http header level. Could this be overcome?
-    //
-    // watch our position and move the location marker accordingly
-    if (locateControl && navigator.geolocation) {
-        const LocateButton = L.Control.extend({
-            options: {position: 'topright'},
-            onAdd: function(map) {
-                const button = L.DomUtil.create('div', 'leaflet-control locate-button');
-                button.innerHTML = "<img src='crosshair.png'></img>"
-                button.onclick = () => {
-                    if (!locationMarker) {
-                        createLocationMarker()
-                        navigator.geolocation.watchPosition((loc) => moveLocationMarker(loc, false))
-                    }
-                    if (lastLoc)
-                        moveLocationMarker(lastLoc, true)
-                    else
-                        navigator.geolocation.getCurrentPosition((loc) => moveLocationMarker(loc, true))
-                };
-                return button;
-            }
-        });
-        //map.addControl(new LocateButton());
-    }
 }
-
-
 
 async function selectHole(holeNumber) {
 
@@ -182,15 +129,13 @@ async function selectHole(holeNumber) {
     selectedHole = holeNumber
     document.querySelector(`#hole-number-${selectedHole}`).classList.add("selected")
     document.querySelector(`#hole-score-${selectedHole}`).classList.add("selected")
-    
 }
 
 
 async function loadCourse() {
 
-
     const response = await fetch('test.geojson')
-    course = await response.json()
+    const course = await response.json()
     print(course)
 
     // group features by nearest hole into holeFeatures array
@@ -231,29 +176,51 @@ async function loadCourse() {
 
 }
 
+function manageLocation() {
 
-async function show() {
+    var locationMarker = undefined
+    var lastLoc
 
-    document.body.innerHTML = `
-        <div id="layout">
-          <div id="map"></div>
-          <table id="scorecard">
-            <tr id="hole-number">
-            <tr id="hole-score">
-          </table>
-          <div id="plus"></div>
-          <div id="minus"></div>
-          <div id="layer"></div>
-        </div>
-    `
-    const layoutElt = document.querySelector("#layout")
-    const mapElt = document.querySelector("#map")
-    const scorecardElt = document.querySelector("#scorecard")
+    function createLocationMarker() {
+        print("creating location marker")
+        var CrosshairIcon = L.Icon.extend({
+            options: {
+                iconSize:     [30, 30],
+                iconAnchor:   [15, 15],
+            }
+        });
+        const crosshairIcon = new CrosshairIcon({iconUrl: "crosshair.png"})
+        locationMarker = L.marker([0,0], {icon: crosshairIcon}).addTo(map)
+    }
 
-    await loadMap(mapElt, true, true)
+    function moveLocationMarker(loc, center) {
+        const latlon = [loc.coords.latitude, loc.coords.longitude]
+        print("moving location marker to", latlon, "centering", center)
+        locationMarker.setLatLng(latlon)
+        if (center)
+            map.setView(latlon)
+        lastLoc = loc
+    }
 
-    await loadCourse()
+    function updateLocation() {
+        if (!locationMarker) {
+            createLocationMarker()
+            navigator.geolocation.watchPosition((loc) => moveLocationMarker(loc, false))
+        }
+        if (lastLoc)
+            moveLocationMarker(lastLoc, true)
+        else
+            navigator.geolocation.getCurrentPosition((loc) => moveLocationMarker(loc, true))
+    }
 
+    const locateButton = document.querySelector("#locate")
+    locateButton.innerHTML = "<img src='crosshair.png'></img>"
+    locateButton.addEventListener("click", () => updateLocation())
+}
+
+function manageScorecard() {
+
+    // create score table
     for (var i = 1; i <= 9; i++) {
         var td = document.createElement("td")
         document.querySelector("#hole-number").appendChild(td)
@@ -267,15 +234,47 @@ async function show() {
         td.addEventListener("click", function() {selectHole(Number(this.holeNumber))})
     }
 
-    
+    // add or subtract one from score
     function updateScore(holeNumber, update) {
         const td = document.querySelector(`#hole-score-${holeNumber}`)        
         const newScore = Number(td.innerText) + update
         td.innerText = newScore > 0? String(newScore) : " "
     }
 
+    // set up button click handlers
     document.querySelector("#plus").addEventListener("click", () => updateScore(selectedHole, +1))
     document.querySelector("#minus").addEventListener("click", () => updateScore(selectedHole, -1))
+}
+
+
+async function show() {
+
+    document.body.innerHTML = `
+        <div id="layout">
+          <div id="map"></div>
+          <table id="scorecard">
+            <tr id="hole-number">
+            <tr id="hole-score">
+          </table>
+          <div id="plus"></div>
+          <div id="minus"></div>
+          <div id="layer"></div>
+          <div id="locate"></div>
+        </div>
+    `
+    const layoutElt = document.querySelector("#layout")
+    const mapElt = document.querySelector("#map")
+    const scorecardElt = document.querySelector("#scorecard")
+    const locateElt = document.querySelector("#locate")
+
+    await loadMap(mapElt, true, true)
+
+    await loadCourse()
+
+    manageScorecard()
+
+    manageLocation()
+
 
     selectHole(1)
 }

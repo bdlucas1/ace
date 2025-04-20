@@ -176,42 +176,77 @@ async function loadCourse() {
 
 }
 
+function defineIcon(width, height, url) {
+    return L.Icon.extend({
+        options: {
+            iconSize: [width, height],
+            iconAnchor: [width/2, height/2],
+            iconUrl: url,
+        }
+    })
+}
+
+const CrosshairIcon = defineIcon(30, 30, "crosshair.png")
+
 function manageLocation() {
 
     var locationMarker = undefined
     var lastLoc
-
-    function createLocationMarker() {
-        print("creating location marker")
-        var CrosshairIcon = L.Icon.extend({
-            options: {
-                iconSize:     [30, 30],
-                iconAnchor:   [15, 15],
-            }
-        });
-        const crosshairIcon = new CrosshairIcon({iconUrl: "crosshair.png"})
-        locationMarker = L.marker([0,0], {icon: crosshairIcon}).addTo(map)
-    }
+    var markers = []
+    const polyline = L.polyline([]).addTo(map)
 
     function moveLocationMarker(loc, center) {
         const latlon = [loc.coords.latitude, loc.coords.longitude]
         print("moving location marker to", latlon, "centering", center)
         locationMarker.setLatLng(latlon)
-        if (center)
+        if (center) {
             map.setView(latlon)
+            map.setBearing(0) // XXX
+        }
         lastLoc = loc
+        updateLine()
     }
 
     function updateLocation() {
         if (!locationMarker) {
-            createLocationMarker()
+            locationMarker = L.marker([0,0], {icon: new CrosshairIcon()}).addTo(map)
             navigator.geolocation.watchPosition((loc) => moveLocationMarker(loc, false))
+            markers = [locationMarker]
         }
         if (lastLoc)
             moveLocationMarker(lastLoc, true)
         else
             navigator.geolocation.getCurrentPosition((loc) => moveLocationMarker(loc, true))
+        updateLine()
     }
+
+    function updateLine() {
+        const lls = markers.map(m => m.getLatLng())
+        polyline.setLatLngs(lls)
+    }
+    map.on("click", function(e) {
+        print("click map")
+        const marker = L.marker(e.latlng, {
+            icon: new CrosshairIcon(),
+            draggable: true,
+            autoPanOnFocus: false, // https://github.com/Raruto/leaflet-rotate/issues/28
+        }).addTo(map)
+        markers.push(marker)
+        updateLine()
+        marker.on("click", () => {
+            print("click marker")
+            markers = markers.filter(m => m !== marker)
+            marker.remove()
+            updateLine()
+        })
+        marker.on("drag", (e) => {
+            print("drag")
+            updateLine()
+        })
+        marker.on("dragend", (e) => {
+            print("dragend")
+        })
+    })
 
     const locateButton = document.querySelector("#locate")
     locateButton.innerHTML = "<img src='crosshair.png'></img>"

@@ -76,7 +76,7 @@ function loadMap(elt, layerControl = true, locateControl = false) {
     var currentLayerNumber = 0
     map = L.map(elt, {
         rotate: true,
-        zoomSnap: 0.1,
+        zoomSnap: 0.2,
         zoomControl: false,
         rotateControl: false,
         layers: Object.values(baseMaps)[currentLayerNumber],

@@ -82,6 +82,18 @@ html, body {
     }
 }
 
+#map {
+
+    .golf-hole    {stroke: #00000000;}
+    .golf-tee     {stroke: #777777; fill: #777777; fill-opacity: 0.2;}
+    .golf-fairway {stroke: #005000; fill: #005000; fill-opacity: 0.2;}
+    .golf-bunker  {stroke: #cbc103; fill: #cbc103; fill-opacity: 0.2;}
+    .golf-green   {stroke: #167461; fill: #167461; fill-opacity: 0.2;}
+
+    /*.path-marker {stroke: #006fff; fill-color: red; fill-opacity: 0.1;}*/
+    .path-line {stroke: #006fff;}
+}
+
 
 
 

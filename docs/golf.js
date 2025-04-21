@@ -1,3 +1,13 @@
+/*
+TODO:
+tee boxes black
+blue circles for markers
+? blue + with blue accuracy for location marker?
+do styling in CSS via className
+bunkers darker yellow
+fix map
+*/
+
 "use strict";
 
 const print = console.log
@@ -110,15 +120,7 @@ async function selectHole(holeNumber) {
     if (selectedHoleLayer)
         map.removeLayer(selectedHoleLayer)
     selectedHoleLayer = L.geoJSON(holeFeatures[holeNumber], {
-        style: feature => {
-            switch (feature.properties.golf) {
-            case 'green': return {color: 'green', class: 'foo'};
-            case 'fairway': return {color: 'darkgreen'};
-            case 'tee': return {color: 'blue'};
-            case 'bunker': return {color: '#ffff40'};
-            default: return {color: '#00000000'}; // don't display
-            }
-        }
+        style: feature => {return {className: `golf-${feature.properties.golf}`}}
     }).addTo(map);
 
     // center hole on map
@@ -256,7 +258,7 @@ function manageLocation() {
         color: "blue", opacity: 0.3,
         fillColor: "blue", fillOpacity: 0.1,
     }).addTo(map)
-    polyline = L.polyline([]).addTo(map)
+    polyline = L.polyline([], {className: "path-line"}).addTo(map)
     
     // watch for position changes, and update locationMarker accordingly
     // this does not center the locationMarker

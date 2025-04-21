@@ -106,6 +106,14 @@ html, body {
         fill-opacity: 0;
     }
 
+    .leaflet-tooltip {
+        font-family: sans-serif;
+        font-size: 14px;
+        padding: 0px;
+        padding-left: 0.5em;
+        padding-right: 0.5em;
+    }
+
 }
 
 

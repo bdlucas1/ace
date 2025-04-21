@@ -117,7 +117,7 @@ async function selectHole(holeNumber) {
             case 'fairway': return {color: 'darkgreen'};
             case 'tee': return {color: 'blue'};
             case 'bunker': return {color: '#ffff40'};
-            default: return {color: 'gray'};
+            default: return {color: '#00000000'}; // don't display
             }
         }
     }).addTo(map);

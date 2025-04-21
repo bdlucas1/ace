@@ -135,12 +135,67 @@ async function selectHole(holeNumber) {
     document.querySelector(`#hole-score-${selectedHole}`).classList.add("selected")
 }
 
+// do an Overpass query against OSM data
+async function query(q) {
 
-async function loadCourse() {
+    const full_q = `
+        [out:json][timeout:25];
+           ${q}
+        out body;
+        >;
+        out skel qt;
+    `
+    const api = "https://overpass-api.de/api/interpreter"
+    const response = await fetch(api, {method: "POST", body: full_q,})
+    try {
+        const response_json = await response.json()
+        const geojson = osmtogeojson(response_json)
+        return geojson
+    } catch(e) {
+        print(response.text())
+    }
+}
 
-    const response = await fetch('test.geojson')
-    const course = await response.json()
-    print(course)
+// TODO: add query for all courses by binned lat/lon
+// that will have the outline, so use that instead of
+// querying it here
+// TODO: handle missing golf course info
+//    e.g. smaller distance?
+// TODO: mechanism to clear cache. for now: at console, localStorage.clear()
+async function query_course_features(name, distance=5000) {
+
+    const course_query = `
+        way[leisure="golf_course"][name="${name}"];
+    `
+    const course = await query(course_query)
+    const center = turf.centroid(course)
+    const [lon, lat] = center.geometry.coordinates
+
+    const features_query = `
+        (
+           way[golf="hole"](around:${distance},${lat},${lon});
+           way[golf="tee"](around:${distance},${lat},${lon});
+           way[golf="fairway"](around:${distance},${lat},${lon});
+           way[golf="bunker"](around:${distance},${lat},${lon});
+           way[golf="green"](around:${distance},${lat},${lon});
+        );
+    `
+    const features = await query(features_query)
+    return features;
+}
+
+async function loadCourse(name) {
+
+    // get course data
+    var course = localStorage.getItem(name);
+    if (course) {
+        print("using cached data for", name)
+        course = JSON.parse(course);
+    } else {
+        print("querying Overpass for", name)
+        course = await query_course_features(name)
+        localStorage.setItem(name, JSON.stringify(course));
+    }
 
     // group features by nearest hole into holeFeatures array
     // holeFeatures is indexed by hole number,
@@ -204,6 +259,20 @@ function resetMarkers() {
             marker.remove()
     markers = locationMarker? [locationMarker] : []
     updateLine()
+}
+
+// return current pos
+async function getPos() {
+    if (lastLoc) {
+        // use last reported by watchPosition
+        return lastLoc;
+    } else {
+        // otherwise ask
+        const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {enableHighAccuracy: true})
+        })
+        return pos
+    }
 }
 
 // turf point from anything that implements .getLatLng()
@@ -286,13 +355,6 @@ function manageLocation() {
 
     // center the current location in the map and reset markers
     async function goToCurrentLocation() {
-
-        const getPos = async () => {
-            const pos = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, {enableHighAccuracy: true})
-            })
-            return pos
-        }
 
         // center on current position
         const loc = lastLoc || await getPos()
@@ -393,12 +455,14 @@ async function show() {
 
     await loadMap(mapElt, true, true)
 
-    await loadCourse()
+    //await loadCourse("Sprain Brook Golf Course")
+    //await loadCourse("Mohansic Golf Course") // TODO: this is missing; handle
+    //await loadCourse("Putnam County Golf Course")
+    await loadCourse("Hollow Brook Golf Club")
 
     manageScorecard()
 
     manageLocation()
-
 
     selectHole(1)
 }

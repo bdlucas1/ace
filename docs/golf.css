@@ -90,8 +90,22 @@ html, body {
     .golf-bunker  {stroke: #cbc103; fill: #cbc103; fill-opacity: 0.2;}
     .golf-green   {stroke: #167461; fill: #167461; fill-opacity: 0.2;}
 
-    /*.path-marker {stroke: #006fff; fill-color: red; fill-opacity: 0.1;}*/
-    .path-line {stroke: #006fff;}
+    .svg-icon * {
+        vector-effect: non-scaling-stroke;
+        overflow: visible;
+    }
+
+    --path-color: #006fff;
+    .path-line {
+        stroke: var(--path-color);
+    }
+    .path-marker {
+        width: 20px;
+        stroke-width: 3px;
+        stroke: var(--path-color);
+        fill-opacity: 0;
+    }
+
 }
 
 

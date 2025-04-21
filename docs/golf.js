@@ -236,6 +236,22 @@ function updateLine() {
     }
 }
 
+function svgIcon(innerSvg, className) {
+    const icon = L.divIcon({
+        html: `
+          <svg class="${className}" viewBox="0 0 2 2"> 
+            ${innerSvg}
+          </svg>
+        `,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+        //style: {overflow: visible},
+        className: "svg-icon",
+    })
+    return icon
+}
+
+
 function manageLocation() {
     
     // move the locationMarker, optionally centering it
@@ -292,14 +308,16 @@ function manageLocation() {
     locateButton.addEventListener("click", goToCurrentLocation)
 
     // clicking on map adds a marker
+    const markerIcon = svgIcon("<circle r='1'>", "path-marker")
     map.on("click", function(e) {
 
         print("click map")
 
         // create marker
         const marker = L.marker(e.latlng, {
-            icon: new CrosshairIcon(),
+            icon: markerIcon,
             draggable: true,
+            autoPan: false,
             autoPanOnFocus: false, // https://github.com/Raruto/leaflet-rotate/issues/28
         }).addTo(map)
         markers.push(marker)

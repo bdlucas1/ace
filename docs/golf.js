@@ -88,26 +88,25 @@ function loadMap(elt, layerControl = true, locateControl = false) {
         print("switching to layer", currentLayerNumber)
         map.addLayer(Object.values(baseMaps)[currentLayerNumber])
     })
-
-
 }
 
 async function selectHole(holeNumber) {
 
     print("selectHole", holeNumber)
 
+    // deselect currently selected hole
     if (selectedHole) {
         document.querySelector(`#hole-number-${selectedHole}`).classList.remove("selected")
         document.querySelector(`#hole-score-${selectedHole}`).classList.remove("selected")
     }
 
-
+    // compute and set bearing from start to end of hole
     const feature = holeFeatures[holeNumber][0]
     const coordinates = feature.geometry.coordinates
-
     const bearing = turf.bearing(coordinates[0], coordinates[coordinates.length - 1])
     await map.setBearing(-bearing)
     
+    // select and show hole features
     if (selectedHoleLayer)
         map.removeLayer(selectedHoleLayer)
     selectedHoleLayer = L.geoJSON(holeFeatures[holeNumber], {
@@ -122,10 +121,13 @@ async function selectHole(holeNumber) {
         }
     }).addTo(map);
 
+    // center hole on map
     const center = turf.center({type: "FeatureCollection", features: holeFeatures[holeNumber]})
     const [lon, lat] = center.geometry.coordinates
     map.setView([lat, lon], 17)
+    resetMarkers()
 
+    // style selected hole on scorecard
     selectedHole = holeNumber
     document.querySelector(`#hole-number-${selectedHole}`).classList.add("selected")
     document.querySelector(`#hole-score-${selectedHole}`).classList.add("selected")
@@ -188,14 +190,53 @@ function defineIcon(width, height, url) {
 
 const CrosshairIcon = defineIcon(30, 30, "crosshair.png")
 
+var locationMarker = undefined
+var accuracyMarker = undefined
+var markers = []
+var polyline
+var lastLoc = undefined
+
+function resetMarkers() {
+    for (const marker of markers)
+        if (marker != locationMarker)
+            marker.remove()
+    markers = locationMarker? [locationMarker] : []
+    updateLine()
+}
+
+// turf point from anything that implements .getLatLng()
+function turf_point(ll) {
+    const {lat, lng} = ll.getLatLng()
+    return turf.point([lng, lat])
+}
+
+// draw a line connecting markers and update distance info
+// only use the location marker if it's visible in the current viewport
+function updateLine() {
+
+    // update the polyline
+    const useMarkers = markers.filter(m => m!=locationMarker || map.getBounds().contains(m.getLatLng()))
+    const lls = useMarkers.map(m => m.getLatLng())
+    polyline.setLatLngs(lls)
+    
+    // update the distance info
+    for (const m of markers)
+        m.unbindTooltip()
+    for (var i = 1; i < useMarkers.length; i++) {
+        const distance = turf.distance(turf_point(useMarkers[i-1]), turf_point(useMarkers[i]), {units: "yards"})
+        const tip = Math.round(distance) + " yd"
+        useMarkers[i].bindTooltip(tip, {
+            permanent: true,
+            direction: "right",
+            offset: L.point([20, 0]),
+            className: "distance-info"
+        })
+    }
+}
+
 function manageLocation() {
-
-    var locationMarker = undefined
-    var accuracyMarker = undefined
-    var lastLoc
-    var markers = []
-    const polyline = L.polyline([]).addTo(map)
-
+    
+    // move the locationMarker, optionally centering it
     function moveLocationMarker(loc, center) {
         const latlon = [loc.coords.latitude, loc.coords.longitude]
         print("moving location marker to", latlon, "centering", center, "accuracy", loc.coords.accuracy, "m")
@@ -208,51 +249,45 @@ function manageLocation() {
         updateLine()
     }
 
-    function updateLocation() {
-        if (!locationMarker) {
-            locationMarker = L.marker([0,0], {icon: new CrosshairIcon()}).addTo(map)
-            accuracyMarker = L.circleMarker([0,0], {
-                radius: 100,
-                color: "blue", opacity: 0.3,
-                fillColor: "blue", fillOpacity: 0.1,
-            }).addTo(map)
-            navigator.geolocation.watchPosition(
-                (loc) => moveLocationMarker(loc, false),
-                print,
-                {enableHighAccuracy: true}
-            )
-            for (const marker of markers)
-                marker.remove()
-            markers = [locationMarker]
+    // set up location and accuracy marker, and polyline
+    locationMarker = L.marker([0,0], {icon: new CrosshairIcon()}).addTo(map)
+    accuracyMarker = L.circleMarker([0,0], {
+        radius: 100,
+        color: "blue", opacity: 0.3,
+        fillColor: "blue", fillOpacity: 0.1,
+    }).addTo(map)
+    polyline = L.polyline([]).addTo(map)
+    
+    // watch for position changes, and update locationMarker accordingly
+    // this does not center the locationMarker
+    navigator.geolocation.watchPosition(
+        (loc) => moveLocationMarker(loc, false),
+        print,
+        {enableHighAccuracy: true}
+    )
+
+    // center the current location in the map and reset markers
+    async function goToCurrentLocation() {
+
+        const getPos = async () => {
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {enableHighAccuracy: true})
+            })
+            return pos
         }
-        if (lastLoc)
-            moveLocationMarker(lastLoc, true)
-        else
-            navigator.geolocation.getCurrentPosition(
-                (loc) => moveLocationMarker(loc, true),
-                print,
-                {enableHighAccuracy: true}
-            )
-        updateLine()
+
+        // center on current position
+        const loc = lastLoc || await getPos()
+        moveLocationMarker(loc, true)
+
+        // remove other markers
+        resetMarkers()
     }
 
-    // draw a line connecting markers and update distance info
-    function updateLine() {
-
-        // update the line        
-        const lls = markers.map(m => m.getLatLng())
-        polyline.setLatLngs(lls)
-
-        // update the distance info
-        for (var i = 1; i < markers.length; i++) {
-            // Assuming you have two Leaflet markers, marker1 and marker2
-            const {lat: lat1, lng: lng1} = markers[i-1].getLatLng()
-            const {lat: lat2, lng: lng2} = markers[i].getLatLng()
-            const point1 = turf.point([lng1, lat1]);
-            const distance = turf.distance(turf.point([lng1,lat1]), turf.point([lng2,lat2]), {units: "yards"})
-            markers[i].setTooltipContent(Math.round(distance) + " yd")
-        }
-    }
+    // locate button moves map to current location
+    const locateButton = document.querySelector("#locate")
+    locateButton.innerHTML = "<img src='crosshair.png'></img>"
+    locateButton.addEventListener("click", goToCurrentLocation)
 
     // clicking on map adds a marker
     map.on("click", function(e) {
@@ -267,17 +302,7 @@ function manageLocation() {
         }).addTo(map)
         markers.push(marker)
 
-        // create tooltip for associated distance info box
-        if (markers.length > 1) {
-            marker.bindTooltip("", {
-                permanent: true,
-                direction: "right",
-                offset: L.point([20, 0]),
-                className: "distance-info"
-            })
-        }
-
-        // redraw line and update distance info
+        // redraw line and update distance info to include new marker
         updateLine()
 
         // clicking marker removes it
@@ -295,9 +320,6 @@ function manageLocation() {
         })
     })
 
-    const locateButton = document.querySelector("#locate")
-    locateButton.innerHTML = "<img src='crosshair.png'></img>"
-    locateButton.addEventListener("click", () => updateLocation())
 }
 
 function manageScorecard() {

@@ -1,13 +1,3 @@
-/*
-TODO:
-tee boxes black
-blue circles for markers
-? blue + with blue accuracy for location marker?
-do styling in CSS via className
-bunkers darker yellow
-fix map
-*/
-
 "use strict";
 
 const print = console.log
@@ -20,6 +10,13 @@ var holeFeatures = []
 var selectedHoleLayer
 var selectedHole
 var baseMaps
+
+var locationMarker = undefined
+var accuracyMarker = undefined
+var markers = []
+var polyline
+var lastLoc = undefined
+
 
 // set up our map using Leaflet
 function loadMap(elt, layerControl = true, locateControl = false) {
@@ -89,7 +86,7 @@ function loadMap(elt, layerControl = true, locateControl = false) {
         zoomControl: false,
         rotateControl: false,
         layers: Object.values(baseMaps)[currentLayerNumber],
-    })
+    }).setZoom(16)
 
     // our own layer switcher
     document.querySelector("#layer").addEventListener("click", () => {
@@ -184,18 +181,35 @@ async function query_course_features(name, distance=5000) {
     return features;
 }
 
+async function query_courses(lat, lon, distance=20000) {
+    const q = `way[leisure=golf_course](around:${distance},${lat},${lon});`
+    const courses = await query(q)
+    const result = {}
+    for (const course of courses.features) {
+        const center = turf.centroid(course)
+        const [lon, lat] = center.geometry.coordinates
+        result[course.properties.name] = [lat, lon]
+    }
+    return result
+}
+
+async function cache_json(key, fun) {
+    var value = localStorage.getItem(key)
+    if (value) {
+        print("using cached data for", key)
+        return JSON.parse(value);
+    } else {
+        print("querying Overpass for", key)
+        value = await fun()
+        localStorage.setItem(key, JSON.stringify(value));
+        return value
+    }
+}
+
 async function loadCourse(name) {
 
     // get course data
-    var course = localStorage.getItem(name);
-    if (course) {
-        print("using cached data for", name)
-        course = JSON.parse(course);
-    } else {
-        print("querying Overpass for", name)
-        course = await query_course_features(name)
-        localStorage.setItem(name, JSON.stringify(course));
-    }
+    const course = await cache_json(name, () => query_course_features(name))
 
     // group features by nearest hole into holeFeatures array
     // holeFeatures is indexed by hole number,
@@ -235,6 +249,33 @@ async function loadCourse(name) {
 
 }
 
+function manageCourses()  {
+
+    async function selectCourse() {
+
+        const pos = await getPos()
+        const [lat, lon] = [pos.coords.latitude.toFixed(2), pos.coords.longitude.toFixed(2)]
+        const key = lat + "," + lon
+        var courses = await cache_json(key, () => query_courses(lat, lon))
+        for (const [course_name, latlon] of Object.entries(courses)) {
+            L.marker(latlon).addTo(map).on("click", () => {
+                loadCourse(course_name)
+                selectHole(1)
+            })
+        }
+        map.setZoom(11)
+        map.setBearing(0)
+    }
+
+
+    const selectCourseButton = document.querySelector("#select-course")
+    selectCourseButton.innerHTML = "<img src='golfer.png'></img>"
+    selectCourseButton.addEventListener("click", selectCourse)
+
+    selectCourse()
+}
+
+
 function defineIcon(width, height, url) {
     return L.Icon.extend({
         options: {
@@ -246,12 +287,6 @@ function defineIcon(width, height, url) {
 }
 
 const CrosshairIcon = defineIcon(30, 30, "crosshair.png")
-
-var locationMarker = undefined
-var accuracyMarker = undefined
-var markers = []
-var polyline
-var lastLoc = undefined
 
 function resetMarkers() {
     for (const marker of markers)
@@ -321,21 +356,32 @@ function svgIcon(innerSvg, className) {
 }
 
 
+// move the locationMarker, optionally centering it
+function moveLocationMarker(loc, center) {
+    const latlon = [loc.coords.latitude, loc.coords.longitude]
+    print("moving location marker to", latlon, "centering", center, "accuracy", loc.coords.accuracy, "m")
+    locationMarker.setLatLng(latlon)
+    accuracyMarker.setLatLng(latlon)
+    accuracyMarker.setRadius(loc.coords.accuracy)
+    if (center)
+        map.setView(latlon)
+    lastLoc = loc
+    updateLine()
+}
+
+// center the current location in the map and reset markers
+async function goToCurrentLocation() {
+    
+    // center on current position
+    const loc = await getPos()
+    moveLocationMarker(loc, true)
+    
+    // remove other markers
+    resetMarkers()
+}
+
 function manageLocation() {
     
-    // move the locationMarker, optionally centering it
-    function moveLocationMarker(loc, center) {
-        const latlon = [loc.coords.latitude, loc.coords.longitude]
-        print("moving location marker to", latlon, "centering", center, "accuracy", loc.coords.accuracy, "m")
-        locationMarker.setLatLng(latlon)
-        accuracyMarker.setLatLng(latlon)
-        accuracyMarker.setRadius(loc.coords.accuracy)
-        if (center)
-            map.setView(latlon)
-        lastLoc = loc
-        updateLine()
-    }
-
     // set up location and accuracy marker, and polyline
     locationMarker = L.marker([0,0], {icon: new CrosshairIcon()}).addTo(map)
     accuracyMarker = L.circleMarker([0,0], {
@@ -347,21 +393,14 @@ function manageLocation() {
     
     // watch for position changes, and update locationMarker accordingly
     // this does not center the locationMarker
-    navigator.geolocation.watchPosition(
-        (loc) => moveLocationMarker(loc, false),
-        print,
-        {enableHighAccuracy: true}
-    )
-
-    // center the current location in the map and reset markers
-    async function goToCurrentLocation() {
-
-        // center on current position
-        const loc = lastLoc || await getPos()
-        moveLocationMarker(loc, true)
-
-        // remove other markers
-        resetMarkers()
+    // if lastLoc is already set then it will be a test position so we don't
+    // watch actual position
+    if (!lastLoc) {
+        navigator.geolocation.watchPosition(
+            (loc) => moveLocationMarker(loc, false),
+            print,
+            {enableHighAccuracy: true}
+        )
     }
 
     // locate button moves map to current location
@@ -446,6 +485,7 @@ async function show() {
           <div id="minus"></div>
           <div id="layer"></div>
           <div id="locate"></div>
+          <div id="select-course"></div>
         </div>
     `
     const layoutElt = document.querySelector("#layout")
@@ -458,14 +498,27 @@ async function show() {
     //await loadCourse("Sprain Brook Golf Course")
     //await loadCourse("Mohansic Golf Course") // TODO: this is missing; handle
     //await loadCourse("Putnam County Golf Course")
-    await loadCourse("Hollow Brook Golf Club")
+    //await loadCourse("Hollow Brook Golf Club")
 
     manageScorecard()
 
     manageLocation()
 
-    selectHole(1)
+    goToCurrentLocation()
+
+    manageCourses()
+
 }
+
+// parse parameters
+const url = new URL(document.baseURI)
+if (url.searchParams.has("testLoc")) {
+    // testLoc sets lastLoc which disables watchPosition
+    const [lat, lon] = url.searchParams.get("testLoc").split(",")
+    lastLoc = {coords: {latitude: Number(lat), longitude: Number(lon), accuracy: 10}} 
+    print(lastLoc)
+}
+
 
 show()
 

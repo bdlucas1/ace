@@ -20,16 +20,17 @@ html, body {
 
     /* rows and columns */
     grid-template-rows: auto auto 1fr;
-    grid-template-columns: auto auto 1fr auto auto;
+    grid-template-columns: auto auto auto 1fr auto auto;
     #layer {grid-row: 1; grid-column: 1;}
     #locate {grid-row: 1; grid-column: 2;}
-    #minus {grid-row: 1; grid-column: 4;}
-    #plus {grid-row: 1; grid-column: 5;}
+    #select-course {grid-row: 1; grid-column: 3;}
+    #minus {grid-row: 1; grid-column: 5;}
+    #plus {grid-row: 1; grid-column: 6;}
     #scorecard {grid-row: 2; grid-column: 1 / -1;}
     #map {grid-row: 3; grid-column: 1 / -1;}
 }
 
-#plus, #minus, #layer, #locate {
+#plus, #minus, #layer, #locate, #select-course {
     aspect-ratio: 1 / 1;
     height: 40px;
     line-height: 40px;
@@ -51,6 +52,7 @@ html, body {
 #layer::before {content: "❖";}
 
 #locate img {height: 85%;}
+#select-course img {height: 85%;}
 
 #scorecard {
 

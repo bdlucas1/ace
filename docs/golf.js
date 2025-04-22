@@ -218,6 +218,9 @@ async function loadCourse(name, latlon) {
     // holeFeatures is indexed by hole number,
     // and each element is an array of features associated with that hole
     // first element of each array is the hole feature (line representing hole) itself
+    //
+    // TODO: this doesn't really work quite right
+    // BUG? see e.g. James Baird State Park - 16 fairway is assigned to hole 1
 
     // first get the hole feature (line representing hole)
     holeFeatures = []
@@ -261,41 +264,47 @@ function manageCourses()  {
 
     var courseMarkers
 
-    const gran = 0.25 // needs to be power of 2
-    const dn = x => Math.floor(x/gran)*gran
-    const up = x => Math.floor((x+gran)/gran)*gran
-
     // put up markers to select courses centered around current location
     async function selectCourse() {
 
+        // clean slate
+        if (courseMarkers)
+            courseMarkers.remove()
+        courseMarkers = L.layerGroup().addTo(map)
+        resetPath()
+        map.setBearing(0)
+        if (map.getZoom() > selectCourseZoom)
+            map.setZoom(selectCourseZoom)
+
+        // snap to tile boundaries
+        const gran = 0.25 // needs to be power of 2
+        const dn = x => Math.floor(x/gran)*gran
+        const up = x => Math.floor((x+gran)/gran)*gran
+
+        // compute bounding box snapped to tiles of size gran deg
         const bounds = map.getBounds()
         const south = dn(bounds.getSouth())
         const west = dn(bounds.getWest())
         const north = up(bounds.getNorth())
         const east = up(bounds.getEast())
 
-        const courses = {}
+        // iterate over tiles adding markers
         for (var s = south; s < north; s += gran) {
             for (var w = west; w < east; w += gran) {
                 const n = s + gran
                 const e = w + gran
                 const key = s + "," + w + "," + n + "," + e
-                var tile = await cache_json(key, () => query_courses(s, w, n, e))
-                Object.assign(courses, tile)
+                const courses = await cache_json(key, () => query_courses(s, w, n, e))
+                for (const [course_name, latlon] of Object.entries(courses)) {
+                    L.marker(latlon).addTo(map).on("click", () => {
+                        courseMarkers.remove()
+                        loadCourse(course_name, latlon)
+                    }).addTo(courseMarkers)
+                }
             }
         }
 
-        // add selectable markers
-        if (courseMarkers)
-            courseMarkers.remove()
-        courseMarkers = L.layerGroup().addTo(map)
-        for (const [course_name, latlon] of Object.entries(courses)) {
-            L.marker(latlon).addTo(map).on("click", () => {
-                courseMarkers.remove()
-                loadCourse(course_name, latlon)
-            }).addTo(courseMarkers)
-        }
-        resetPath()
+
     }
 
     const selectCourseButton = document.querySelector("#select-course")

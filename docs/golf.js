@@ -8,6 +8,8 @@ var baseMaps
 
 var lastLoc = undefined
 
+var courseMarkers
+
 var selectedHole
 var selectedHoleLayer
 var holeFeatures
@@ -209,6 +211,7 @@ async function cache_json(key, fun) {
     }
 }
 
+// TODO: clear course markers?
 async function loadCourse(name, latlon) {
 
     // get course data
@@ -262,8 +265,6 @@ async function loadCourse(name, latlon) {
 
 function manageCourses()  {
 
-    var courseMarkers
-
     // put up markers to select courses centered around current location
     async function selectCourse() {
 
@@ -287,6 +288,7 @@ function manageCourses()  {
         const east = up(bounds.getEast())
 
         // iterate over tiles adding markers
+        const pos = await getPos()
         for (var s = south; s < north; s += gran) {
             for (var w = west; w < east; w += gran) {
                 const n = s + gran
@@ -294,7 +296,13 @@ function manageCourses()  {
                 const key = s + "," + w + "," + n + "," + e
                 const courses = await cache_json(key, () => query_courses(s, w, n, e))
                 for (const [course_name, latlon] of Object.entries(courses)) {
-                    L.marker(latlon).addTo(map).on("click", () => {
+                    // if we're near course abort and just load that course
+                    // TODO: tune this distance?
+                    if (turf_distance(pos, latlon) < 1000) {
+                        loadCourse(course_name, latlon)
+                        return // TODO: break?
+                    }
+                    const marker = L.marker(latlon).addTo(map).on("click", () => {
                         courseMarkers.remove()
                         loadCourse(course_name, latlon)
                     }).addTo(courseMarkers)
@@ -354,10 +362,26 @@ async function getPos() {
     }
 }
 
-// turf point from anything that implements .getLatLng()
+// turf point from various other representations
 function turf_point(ll) {
-    const {lat, lng} = ll.getLatLng()
-    return turf.point([lng, lat])
+    if (ll.getLatLng) {
+        const {lat, lng} = ll.getLatLng()
+        return turf.point([lng, lat])
+    } else if (Array.isArray(ll) && ll.length==2) {
+        const [lat, lon] = ll
+        return turf.point([lon, lat])
+    } else if (ll.coords) {
+        const {latitude: lat, longitude: lon} = ll.coords
+        return turf.point([lon, lat])
+    } else {
+        // TODO: hope for the best?
+        return ll
+    }
+}
+
+// TODO: use this everywhere
+function turf_distance(a, b) {
+    return turf.distance(turf_point(a), turf_point(b), {units: "meters"})
 }
 
 // draw a line connecting markers and update distance info

@@ -14,8 +14,8 @@ var holeFeatures
 
 var locationMarker = undefined
 var accuracyMarker = undefined
-var markers = []
-var polyline
+var pathMarkers = []
+var pathLine
 
 const holeZoom = 17
 const courseZoom = 15
@@ -139,7 +139,7 @@ async function selectHole(holeNumber) {
     const center = turf.center({type: "FeatureCollection", features: holeFeatures[holeNumber]})
     const [lon, lat] = center.geometry.coordinates
     map.setView([lat, lon], holeZoom)
-    resetMarkers()
+    resetPath()
 
 }
 
@@ -255,7 +255,12 @@ async function loadCourse(name, latlon) {
 
 }
 
+var courseMarkers
+
+
 function manageCourses()  {
+
+    var courseMarkers
 
     // put up markers to select course
     async function selectCourse() {
@@ -267,7 +272,9 @@ function manageCourses()  {
         var courses = await cache_json(key, () => query_courses(lat, lon))
 
         // add selectable markers
-        const courseMarkers = L.layerGroup().addTo(map)
+        if (courseMarkers)
+            courseMarkers.remove()
+        courseMarkers = L.layerGroup().addTo(map)
         for (const [course_name, latlon] of Object.entries(courses)) {
             L.marker(latlon).addTo(map).on("click", () => {
                 courseMarkers.remove()
@@ -276,7 +283,7 @@ function manageCourses()  {
         }
         map.setView([Number(lat), Number(lon)], selectCourseZoom)
         map.setBearing(0)
-        resetMarkers()
+        resetPath()
     }
 
     const selectCourseButton = document.querySelector("#select-course")
@@ -300,11 +307,11 @@ function defineIcon(width, height, url) {
 
 const CrosshairIcon = defineIcon(30, 30, "crosshair.png")
 
-function resetMarkers() {
-    for (const marker of markers)
+function resetPath() {
+    for (const marker of pathMarkers)
         if (marker != locationMarker)
             marker.remove()
-    markers = locationMarker? [locationMarker] : []
+    pathMarkers = locationMarker? [locationMarker] : []
     updateLine()
 }
 
@@ -333,12 +340,12 @@ function turf_point(ll) {
 function updateLine() {
 
     // update the polyline
-    const useMarkers = markers.filter(m => m!=locationMarker || map.getBounds().contains(m.getLatLng()))
+    const useMarkers = pathMarkers.filter(m => m!=locationMarker || map.getBounds().contains(m.getLatLng()))
     const lls = useMarkers.map(m => m.getLatLng())
-    polyline.setLatLngs(lls)
+    pathLine.setLatLngs(lls)
     
     // update the distance info
-    for (const m of markers)
+    for (const m of pathMarkers)
         m.unbindTooltip()
     for (var i = 1; i < useMarkers.length; i++) {
         const distance = turf.distance(turf_point(useMarkers[i-1]), turf_point(useMarkers[i]), {units: "yards"})
@@ -389,7 +396,7 @@ async function goToCurrentLocation() {
     moveLocationMarker(loc, true)
     
     // remove other markers
-    resetMarkers()
+    resetPath()
 }
 
 function manageLocation() {
@@ -401,7 +408,7 @@ function manageLocation() {
         color: "blue", opacity: 0.3,
         fillColor: "blue", fillOpacity: 0.1,
     }).addTo(map)
-    polyline = L.polyline([], {className: "path-line"}).addTo(map)
+    pathLine = L.polyline([], {className: "path-line"}).addTo(map)
     
     // watch for position changes, and update locationMarker accordingly
     // this does not center the locationMarker
@@ -433,7 +440,7 @@ function manageLocation() {
             autoPan: false,
             autoPanOnFocus: false, // https://github.com/Raruto/leaflet-rotate/issues/28
         }).addTo(map)
-        markers.push(marker)
+        pathMarkers.push(marker)
 
         // redraw line and update distance info to include new marker
         updateLine()
@@ -442,7 +449,7 @@ function manageLocation() {
         marker.on("click", () => {
             print("click marker")
             marker.remove()
-            markers = markers.filter(m => m !== marker)
+            pathMarkers = pathMarkers.filter(m => m !== marker)
             updateLine()
         })
 

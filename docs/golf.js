@@ -3,19 +3,23 @@
 const print = console.log
 const printj = (j) => print(JSON.stringify(j, null, 2))
 
-const latlon = [41.32035685669253, -73.89382235173484]
-
 var map
-var holeFeatures = []
-var selectedHoleLayer
-var selectedHole
 var baseMaps
+
+var lastLoc = undefined
+
+var selectedHole
+var selectedHoleLayer
+var holeFeatures
 
 var locationMarker = undefined
 var accuracyMarker = undefined
 var markers = []
 var polyline
-var lastLoc = undefined
+
+const holeZoom = 17
+const courseZoom = 15
+const selectCourseZoom = 11
 
 
 // set up our map using Leaflet
@@ -107,6 +111,17 @@ async function selectHole(holeNumber) {
         document.querySelector(`#hole-score-${selectedHole}`).classList.remove("selected")
     }
 
+    // style selected hole on scorecard
+    selectedHole = holeNumber
+    document.querySelector(`#hole-number-${selectedHole}`).classList.add("selected")
+    document.querySelector(`#hole-score-${selectedHole}`).classList.add("selected")
+
+    // do we have hole info to show?
+    if (!holeFeatures[holeNumber]) {
+        print("no features")
+        return
+    }
+
     // compute and set bearing from start to end of hole
     const feature = holeFeatures[holeNumber][0]
     const coordinates = feature.geometry.coordinates
@@ -123,13 +138,9 @@ async function selectHole(holeNumber) {
     // center hole on map
     const center = turf.center({type: "FeatureCollection", features: holeFeatures[holeNumber]})
     const [lon, lat] = center.geometry.coordinates
-    map.setView([lat, lon], 17)
+    map.setView([lat, lon], holeZoom)
     resetMarkers()
 
-    // style selected hole on scorecard
-    selectedHole = holeNumber
-    document.querySelector(`#hole-number-${selectedHole}`).classList.add("selected")
-    document.querySelector(`#hole-score-${selectedHole}`).classList.add("selected")
 }
 
 // do an Overpass query against OSM data
@@ -153,20 +164,10 @@ async function query(q) {
     }
 }
 
-// TODO: add query for all courses by binned lat/lon
-// that will have the outline, so use that instead of
-// querying it here
-// TODO: handle missing golf course info
-//    e.g. smaller distance?
 // TODO: mechanism to clear cache. for now: at console, localStorage.clear()
-async function query_course_features(name, distance=5000) {
+async function query_course_features(latlon, distance=5000) {
 
-    const course_query = `
-        way[leisure="golf_course"][name="${name}"];
-    `
-    const course = await query(course_query)
-    const center = turf.centroid(course)
-    const [lon, lat] = center.geometry.coordinates
+    const [lat, lon] = latlon
 
     const features_query = `
         (
@@ -206,10 +207,10 @@ async function cache_json(key, fun) {
     }
 }
 
-async function loadCourse(name) {
+async function loadCourse(name, latlon) {
 
     // get course data
-    const course = await cache_json(name, () => query_course_features(name))
+    const course = await cache_json(name, () => query_course_features(latlon))
 
     // group features by nearest hole into holeFeatures array
     // holeFeatures is indexed by hole number,
@@ -217,6 +218,7 @@ async function loadCourse(name) {
     // first element of each array is the hole feature (line representing hole) itself
 
     // first get the hole feature (line representing hole)
+    holeFeatures = []
     for (const feature of course.features) {
         if (feature.properties.golf == "hole") {
             const holeNumber = feature.properties.ref
@@ -247,31 +249,41 @@ async function loadCourse(name) {
         }
     }
 
+    // show the course
+    print("setview", latlon)
+    map.setView(latlon, courseZoom)
+
 }
 
 function manageCourses()  {
 
+    // put up markers to select course
     async function selectCourse() {
 
+        // get nearby courses
         const pos = await getPos()
         const [lat, lon] = [pos.coords.latitude.toFixed(2), pos.coords.longitude.toFixed(2)]
         const key = lat + "," + lon
         var courses = await cache_json(key, () => query_courses(lat, lon))
+
+        // add selectable markers
+        const courseMarkers = L.layerGroup().addTo(map)
         for (const [course_name, latlon] of Object.entries(courses)) {
             L.marker(latlon).addTo(map).on("click", () => {
-                loadCourse(course_name)
-                selectHole(1)
-            })
+                courseMarkers.remove()
+                loadCourse(course_name, latlon)
+            }).addTo(courseMarkers)
         }
-        map.setZoom(11)
+        map.setView([Number(lat), Number(lon)], selectCourseZoom)
         map.setBearing(0)
+        resetMarkers()
     }
-
 
     const selectCourseButton = document.querySelector("#select-course")
     selectCourseButton.innerHTML = "<img src='golfer.png'></img>"
     selectCourseButton.addEventListener("click", selectCourse)
 
+    // this is our initial action
     selectCourse()
 }
 

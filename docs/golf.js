@@ -273,8 +273,6 @@ function manageCourses()  {
         courseMarkers = L.layerGroup().addTo(map)
         resetPath()
         map.setBearing(0)
-        if (map.getZoom() > selectCourseZoom)
-            map.setZoom(selectCourseZoom)
 
         // snap to tile boundaries
         const gran = 0.25 // needs to be power of 2
@@ -304,7 +302,10 @@ function manageCourses()  {
             }
         }
 
-
+        // lock screen orientation
+        screen.orientation.lock('portrait')
+            .then(() => print('orientation locked '))
+            .catch(err => print('failed to lock orientation:', err))
     }
 
     const selectCourseButton = document.querySelector("#select-course")

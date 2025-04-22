@@ -90,7 +90,7 @@ function loadMap(elt, layerControl = true, locateControl = false) {
         zoomControl: false,
         rotateControl: false,
         layers: Object.values(baseMaps)[currentLayerNumber],
-    }).setZoom(16)
+    }).setZoom(selectCourseZoom)
 
     // our own layer switcher
     document.querySelector("#layer").addEventListener("click", () => {
@@ -182,7 +182,9 @@ async function query_course_features(latlon, distance=5000) {
     return features;
 }
 
-async function query_courses(lat, lon, distance=20000) {
+// TODO: need better strategy: cover visible map area with 0.1 deg tiles
+// instead of having a large
+async function query_courses(lat, lon, distance=30000) {
     const q = `way[leisure=golf_course](around:${distance},${lat},${lon});`
     const courses = await query(q)
     const result = {}
@@ -255,19 +257,17 @@ async function loadCourse(name, latlon) {
 
 }
 
-var courseMarkers
-
-
 function manageCourses()  {
 
     var courseMarkers
 
-    // put up markers to select course
+    // put up markers to select courses centered around current location
     async function selectCourse() {
 
         // get nearby courses
-        const pos = await getPos()
-        const [lat, lon] = [pos.coords.latitude.toFixed(2), pos.coords.longitude.toFixed(2)]
+        const center = map.getCenter()
+        print("xxx bounds", map.getBounds())
+        const [lat, lon] = [center.lat.toFixed(1), center.lng.toFixed(1)]
         const key = lat + "," + lon
         var courses = await cache_json(key, () => query_courses(lat, lon))
 
@@ -399,7 +399,7 @@ async function goToCurrentLocation() {
     resetPath()
 }
 
-function manageLocation() {
+async function manageLocation() {
     
     // set up location and accuracy marker, and polyline
     locationMarker = L.marker([0,0], {icon: new CrosshairIcon()}).addTo(map)
@@ -460,6 +460,9 @@ function manageLocation() {
         })
     })
 
+    // initial location
+    await goToCurrentLocation()
+
 }
 
 function manageScorecard() {
@@ -513,20 +516,9 @@ async function show() {
     const locateElt = document.querySelector("#locate")
 
     await loadMap(mapElt, true, true)
-
-    //await loadCourse("Sprain Brook Golf Course")
-    //await loadCourse("Mohansic Golf Course") // TODO: this is missing; handle
-    //await loadCourse("Putnam County Golf Course")
-    //await loadCourse("Hollow Brook Golf Club")
-
-    manageScorecard()
-
-    manageLocation()
-
-    goToCurrentLocation()
-
-    manageCourses()
-
+    await manageScorecard()
+    await manageLocation()
+    await manageCourses()
 }
 
 // parse parameters

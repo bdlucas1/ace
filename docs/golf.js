@@ -276,11 +276,11 @@ function manageCourses()  {
         map.setBearing(0)
 
         // snap to tile boundaries
-        const gran = 0.25 // needs to be power of 2
-        const dn = x => Math.floor(x/gran)*gran
-        const up = x => Math.floor((x+gran)/gran)*gran
+        const tile_size = 0.25 // needs to be power of 2
+        const dn = x => Math.floor(x/tile_size)*tile_size
+        const up = x => Math.floor((x+tile_size)/tile_size)*tile_size
 
-        // compute bounding box snapped to tiles of size gran deg
+        // compute bounding box snapped to tiles of size tile_size deg
         const bounds = map.getBounds()
         const south = dn(bounds.getSouth())
         const west = dn(bounds.getWest())
@@ -289,10 +289,10 @@ function manageCourses()  {
 
         // iterate over tiles adding markers
         const pos = await getPos()
-        for (var s = south; s < north; s += gran) {
-            for (var w = west; w < east; w += gran) {
-                const n = s + gran
-                const e = w + gran
+        for (var s = south; s < north; s += tile_size) {
+            for (var w = west; w < east; w += tile_size) {
+                const n = s + tile_size
+                const e = w + tile_size
                 const key = s + "," + w + "," + n + "," + e
                 const courses = await cache_json(key, () => query_courses(s, w, n, e))
                 for (const [course_name, latlon] of Object.entries(courses)) {

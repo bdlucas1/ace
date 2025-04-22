@@ -302,10 +302,13 @@ function manageCourses()  {
             }
         }
 
+        /*
+        // not available any more
         // lock screen orientation
         screen.orientation.lock('portrait')
             .then(() => print('orientation locked '))
             .catch(err => print('failed to lock orientation:', err))
+        */
     }
 
     const selectCourseButton = document.querySelector("#select-course")

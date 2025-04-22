@@ -184,8 +184,8 @@ async function query_course_features(latlon, distance=5000) {
 
 // TODO: need better strategy: cover visible map area with 0.1 deg tiles
 // instead of having a large
-async function query_courses(lat, lon, distance=30000) {
-    const q = `way[leisure=golf_course](around:${distance},${lat},${lon});`
+async function query_courses(south, west, north, east) {
+    const q = `way[leisure=golf_course](${south},${west},${north},${east});`
     const courses = await query(q)
     const result = {}
     for (const course of courses.features) {
@@ -261,15 +261,29 @@ function manageCourses()  {
 
     var courseMarkers
 
+    const gran = 0.25 // needs to be power of 2
+    const dn = x => Math.floor(x/gran)*gran
+    const up = x => Math.floor((x+gran)/gran)*gran
+
     // put up markers to select courses centered around current location
     async function selectCourse() {
 
-        // get nearby courses
-        const center = map.getCenter()
-        print("xxx bounds", map.getBounds())
-        const [lat, lon] = [center.lat.toFixed(1), center.lng.toFixed(1)]
-        const key = lat + "," + lon
-        var courses = await cache_json(key, () => query_courses(lat, lon))
+        const bounds = map.getBounds()
+        const south = dn(bounds.getSouth())
+        const west = dn(bounds.getWest())
+        const north = up(bounds.getNorth())
+        const east = up(bounds.getEast())
+
+        const courses = {}
+        for (var s = south; s < north; s += gran) {
+            for (var w = west; w < east; w += gran) {
+                const n = s + gran
+                const e = w + gran
+                const key = s + "," + w + "," + n + "," + e
+                var tile = await cache_json(key, () => query_courses(s, w, n, e))
+                Object.assign(courses, tile)
+            }
+        }
 
         // add selectable markers
         if (courseMarkers)
@@ -281,8 +295,6 @@ function manageCourses()  {
                 loadCourse(course_name, latlon)
             }).addTo(courseMarkers)
         }
-        map.setView([Number(lat), Number(lon)], selectCourseZoom)
-        map.setBearing(0)
         resetPath()
     }
 

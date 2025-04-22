@@ -411,7 +411,7 @@ function updateLine() {
 function svgIcon(innerSvg, className) {
     const icon = L.divIcon({
         html: `
-          <svg class="${className}" viewBox="0 0 2 2"> 
+          <svg class="${className}">
             ${innerSvg}
           </svg>
         `,
@@ -477,7 +477,7 @@ async function manageLocation() {
     locateButton.addEventListener("click", goToCurrentLocation)
 
     // clicking on map adds a marker
-    const markerIcon = svgIcon("<circle r='1'>", "path-marker")
+    const markerIcon = svgIcon("<circle>", "path-marker")
     map.on("click", function(e) {
 
         print("click map")

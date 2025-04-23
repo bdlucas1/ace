@@ -60,13 +60,15 @@ html, body {
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
+    gap: 2px;
 
     table {
 
-        flex: 0 0 100%; /* makes each scorecard take up 100% of width of grid */
+        flex: 0 0 calc(100% - 2px); /* makes each scorecard take up 100% of width of grid */
         width: 100%;
         scroll-snap-align: start;
-        margin-right: -1px; /* collapse borders between tables */
+        padding-right: 15px; /* collapse borders between tables */
+        padding-left: 15px; /* collapse borders between tables */
 
         table-layout: fixed;
         border-collapse: collapse;

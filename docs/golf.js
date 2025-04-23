@@ -516,36 +516,27 @@ async function manageLocation() {
 
 function manageScorecard() {
 
-    // create score tables
-    for (var start = 1; start <= 10; start += 9) {
+    // two tables, front and back nine
+    var holeNumber = 1
+    document.querySelectorAll(".scorecard").forEach(table => {
 
-        var table = document.createElement("table")
-        table.classList.add("scorecard")
-        document.querySelector("#score-row").appendChild(table)
+        for (var i = 0; i < 9; i++, holeNumber++) {
 
-        var holeNumberRow = document.createElement("tr")
-        holeNumberRow.classList.add("hole-number")
-        table.appendChild(holeNumberRow)
-
-        var holeScoreRow = document.createElement("tr")
-        holeScoreRow.classList.add("hole-score")
-        table.appendChild(holeScoreRow)
-
-        for (var holeNumber = start; holeNumber < start+9; holeNumber++) {
-
+            // hole number cell
             var td = document.createElement("td")
             td.innerText = holeNumber
             td.id = `hole-number-${holeNumber}`
             td.addEventListener("click", function() {selectHole(Number(this.innerText))})
-            holeNumberRow.appendChild(td)
+            table.querySelector(".hole-number").appendChild(td)
 
+            // score cell
             td = document.createElement("td")
             td.id = `hole-score-${holeNumber}`
             td.holeNumber = holeNumber
             td.addEventListener("click", function() {selectHole(Number(this.holeNumber))})
-            holeScoreRow.appendChild(td)
+            table.querySelector(".hole-score").appendChild(td)
         }
-    }
+    })
 
     // add or subtract one from score
     function updateScore(holeNumber, update) {
@@ -565,7 +556,10 @@ async function show() {
     document.body.innerHTML = `
         <div id="layout">
           <div id="map"></div>
-          <div id="score-row"></div>
+          <div id="score-row">
+              <table class="scorecard"><tr class="hole-number"><tr class="hole-score"></table>
+              <table class="scorecard"><tr class="hole-number"><tr class="hole-score"></table>
+          </div>
           <div id="plus"></div>
           <div id="minus"></div>
           <div id="layer"></div>

@@ -61,7 +61,7 @@ html, body {
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
 
-    .scorecard {
+    table {
 
         flex: 0 0 100%; /* makes each scorecard take up 100% of width of grid */
         scroll-snap-align: start;
@@ -74,7 +74,11 @@ html, body {
             border: 1px solid gray;
             text-align: center;
         }
-        
+
+    }
+
+    .scorecard {
+
         .hole-number {
             font-family: sans-serif;
             font-style: italic;
@@ -92,6 +96,11 @@ html, body {
             color: black;
         }
     }
+
+    .score-total {
+
+    }
+
 }
 
 #map {

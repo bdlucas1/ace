@@ -60,11 +60,11 @@ html, body {
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
-    gap: 2px;
+    gap: 4px;
 
     table {
 
-        flex: 0 0 calc(100% - 2px); /* makes each scorecard take up 100% of width of grid */
+        flex: 0 0 calc(100% - 4px); /* makes each scorecard take up 100% of width of grid */
         width: 100%;
         scroll-snap-align: start;
         padding-right: 15px; /* collapse borders between tables */

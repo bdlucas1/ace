@@ -66,7 +66,7 @@ html, body {
         flex: 0 0 100%; /* makes each scorecard take up 100% of width of grid */
         width: 100%;
         scroll-snap-align: start;
-        margin-right: -1px; /* collapse borders between tables */
+        margin-right: -2px; /* collapse borders between tables */
 
         table-layout: fixed;
         border-collapse: collapse;

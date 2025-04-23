@@ -66,19 +66,19 @@ html, body {
         text-align: center;
     }
 
-    #hole-number {
+    .hole-number {
         font-family: sans-serif;
         font-style: italic;
         font-size: 16px;
     }
     
-    #hole-score {
+    .hole-score {
         font-family: sans-serif;
         font-size: 24px;
         height: 1.5lh;
     }
     
-    #hole-number td.selected {
+    .hole-number td.selected {
         background: #ffdd88;
         color: black;
     }

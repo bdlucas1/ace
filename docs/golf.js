@@ -229,6 +229,7 @@ async function loadCourse(name, latlon) {
     holeFeatures = []
     for (const feature of course.features) {
         if (feature.properties.golf == "hole") {
+            // other code depends on the "hole" feature being first in the features array
             const holeNumber = feature.properties.ref
             holeFeatures[holeNumber] = [feature]
 
@@ -540,9 +541,39 @@ function manageScorecard() {
 
     // add or subtract one from score
     function updateScore(holeNumber, update) {
+
+        // update hole score
         const td = document.querySelector(`#hole-score-${holeNumber}`)        
         const newScore = Number(td.innerText) + update
         td.innerText = newScore > 0? String(newScore) : " "
+
+        // this assumes the "hole" feature is the first in the array of features for each hole
+        const par = holeNumber => holeFeatures[holeNumber][0].properties.par
+
+        // update totals
+        function computeScore(start) {
+            for (var holeNumber = start, total = 0, toPar = 0, i = 0; i < 9; i++, holeNumber++) {
+                const score = Number(document.querySelector(`#hole-score-${holeNumber}`).innerText)
+                total += score
+                if (score > 0)
+                    toPar += score - par(holeNumber)
+            }
+            return [total, toPar]
+        }                
+        const [outTotal, outToPar] = computeScore(1)
+        const [inTotal, inToPar] = computeScore(10)
+
+        const total = outTotal + inTotal
+        const fmtToPar = toPar => toPar == 0? "E": toPar > 0? "+" + toPar : toPar
+        const toPar = inToPar + outToPar
+
+        document.querySelector("#out-score").innerText = outTotal > 0? outTotal : ""
+        document.querySelector("#in-score").innerText = inTotal > 0? inTotal : ""
+        document.querySelector("#total-score").innerText = inTotal>0 && outTotal>0? total : ""
+
+        document.querySelector("#out-to-par").innerText = outTotal>0? fmtToPar(outToPar) : ""
+        document.querySelector("#in-to-par").innerText = inTotal>0? fmtToPar(inToPar) : ""
+        document.querySelector("#total-to-par").innerText = outTotal>0 && inTotal>0? fmtToPar(toPar) : ""
     }
 
     // set up button click handlers
@@ -566,9 +597,9 @@ async function show() {
                       <td colspan=2>total</td>
                   </tr>
                   <tr class="total-score">
-                      <td id="out-score"></td> <td id="out-rel"></td>
-                      <td id="in-score"></td>  <td id="in-rel"></td>
-                      <td id="tot-score"></td> <td id="tot-rel"></td>
+                      <td id="out-score"></td> <td id="out-to-par"></td>
+                      <td id="in-score"></td>  <td id="in-to-par"></td>
+                      <td id="total-score"></td> <td id="total-to-par"></td>
                   </tr>
               </table>
           </div>

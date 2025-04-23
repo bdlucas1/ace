@@ -64,7 +64,9 @@ html, body {
     table {
 
         flex: 0 0 100%; /* makes each scorecard take up 100% of width of grid */
+        width: 100%;
         scroll-snap-align: start;
+        margin-right: -1px; /* collapse borders between tables */
 
         table-layout: fixed;
         border-collapse: collapse;
@@ -75,17 +77,13 @@ html, body {
             text-align: center;
         }
 
-    }
-
-    .scorecard {
-
-        .hole-number {
+        tr:nth-child(1) {
             font-family: sans-serif;
             font-style: italic;
             font-size: 16px;
         }
         
-        .hole-score {
+        tr:nth-child(2) {
             font-family: sans-serif;
             font-size: 24px;
             height: 1.5lh;
@@ -96,11 +94,6 @@ html, body {
             color: black;
         }
     }
-
-    .score-total {
-
-    }
-
 }
 
 #map {

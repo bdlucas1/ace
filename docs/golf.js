@@ -559,6 +559,18 @@ async function show() {
           <div id="score-row">
               <table class="scorecard"><tr class="hole-number"><tr class="hole-score"></table>
               <table class="scorecard"><tr class="hole-number"><tr class="hole-score"></table>
+              <table id="score-total">
+                  <tr class="total-heading">
+                      <td colspan=2>out</td>
+                      <td colspan=2>in</td>
+                      <td colspan=2>total</td>
+                  </tr>
+                  <tr class="total-score">
+                      <td id="out-score"></td> <td id="out-rel"></td>
+                      <td id="in-score"></td>  <td id="in-rel"></td>
+                      <td id="tot-score"></td> <td id="tot-rel"></td>
+                  </tr>
+              </table>
           </div>
           <div id="plus"></div>
           <div id="minus"></div>

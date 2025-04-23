@@ -517,11 +517,11 @@ async function manageLocation() {
 function manageScorecard() {
 
     // create score tables
-    for (var start = 1; start <= 1; start += 9) {
+    for (var start = 1; start <= 10; start += 9) {
 
         var table = document.createElement("table")
-        table.id = "scorecard"
-        document.querySelector("#layout").appendChild(table)
+        table.classList.add("scorecard")
+        document.querySelector("#score-row").appendChild(table)
 
         var holeNumberRow = document.createElement("tr")
         holeNumberRow.classList.add("hole-number")
@@ -565,7 +565,7 @@ async function show() {
     document.body.innerHTML = `
         <div id="layout">
           <div id="map"></div>
-          <!--<div id="score-row"></div>-->
+          <div id="score-row"></div>
           <div id="plus"></div>
           <div id="minus"></div>
           <div id="layer"></div>

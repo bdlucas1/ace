@@ -26,7 +26,7 @@ html, body {
     #select-course {grid-row: 1; grid-column: 3;}
     #minus {grid-row: 1; grid-column: 5;}
     #plus {grid-row: 1; grid-column: 6;}
-    #scorecard {grid-row: 2; grid-column: 1 / -1;}
+    #score-row {grid-row: 2; grid-column: 1 / -1;}
     #map {grid-row: 3; grid-column: 1 / -1;}
 }
 
@@ -54,33 +54,43 @@ html, body {
 #locate img {height: 85%;}
 #select-course img {height: 85%;}
 
-#scorecard {
+#score-row {
 
-    width: 100%;
-    table-layout: fixed;
-    border-collapse: collapse;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
 
-    td {
-        color: white;
-        border: 1px solid gray;
-        text-align: center;
-    }
+    .scorecard {
 
-    .hole-number {
-        font-family: sans-serif;
-        font-style: italic;
-        font-size: 16px;
-    }
-    
-    .hole-score {
-        font-family: sans-serif;
-        font-size: 24px;
-        height: 1.5lh;
-    }
-    
-    .hole-number td.selected {
-        background: #ffdd88;
-        color: black;
+        flex: 0 0 100%; /* makes each scorecard take up 100% of width of grid */
+        scroll-snap-align: start;
+
+        table-layout: fixed;
+        border-collapse: collapse;
+
+        td {
+            color: white;
+            border: 1px solid gray;
+            text-align: center;
+        }
+        
+        .hole-number {
+            font-family: sans-serif;
+            font-style: italic;
+            font-size: 16px;
+        }
+        
+        .hole-score {
+            font-family: sans-serif;
+            font-size: 24px;
+            height: 1.5lh;
+        }
+        
+        .hole-number td.selected {
+            background: #ffdd88;
+            color: black;
+        }
     }
 }
 

@@ -61,6 +61,33 @@ function turf_distance(a, b) {
     return turf.distance(turf_point(a), turf_point(b), {units: "meters"})
 }
 
+function defineIcon(width, height, url) {
+    return L.Icon.extend({
+        options: {
+            iconSize: [width, height],
+            iconAnchor: [width/2, height/2],
+            iconUrl: url,
+        }
+    })
+}
+
+const CrosshairIcon = defineIcon(30, 30, "crosshair.png")
+
+function svgIcon(innerSvg, className) {
+    const icon = L.divIcon({
+        html: `
+          <svg class="${className}">
+            ${innerSvg}
+          </svg>
+        `,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+        //style: {overflow: visible},
+        className: "svg-icon",
+    })
+    return icon
+}
+
 
 ////////////////////////////////////////////////////////////
 //
@@ -149,6 +176,56 @@ function loadMap(elt, layerControl = true, locateControl = false) {
     })
 }
 
+
+////////////////////////////////////////////////////////////
+//
+// path
+//
+
+
+function resetPath() {
+    for (const marker of pathMarkers)
+        if (marker != locationMarker)
+            marker.remove()
+    pathMarkers = locationMarker? [locationMarker] : []
+    updateLine()
+}
+
+// draw a line connecting markers and update distance info
+// only use the location marker if it's visible in the current viewport
+function updateLine() {
+
+    // update the polyline
+    const useMarkers = pathMarkers.filter(m => m!=locationMarker || theMap.getBounds().contains(m.getLatLng()))
+    const lls = useMarkers.map(m => m.getLatLng())
+    pathLine.setLatLngs(lls)
+    
+    // update the distance info
+    for (const m of pathMarkers)
+        m.unbindTooltip()
+    for (var i = 1; i < useMarkers.length; i++) {
+        const distance = turf.distance(turf_point(useMarkers[i-1]), turf_point(useMarkers[i]), {units: "yards"})
+        const tip = Math.round(distance) + " yd"
+        useMarkers[i].bindTooltip(tip, {
+            permanent: true,
+            direction: "right",
+            offset: L.point([20, 0]),
+            className: "distance-info"
+        })
+    }
+}
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////
+//
+// scorecard
+//
+
 async function selectHole(holeNumber) {
 
     print("selectHole", holeNumber)
@@ -190,6 +267,79 @@ async function selectHole(holeNumber) {
     resetPath()
 
 }
+
+function manageScorecard() {
+
+    // two tables, front and back nine
+    var holeNumber = 1
+    document.querySelectorAll(".scorecard").forEach(table => {
+
+        for (var i = 0; i < 9; i++, holeNumber++) {
+
+            // hole number cell
+            var td = document.createElement("td")
+            td.innerText = holeNumber
+            td.id = `hole-number-${holeNumber}`
+            td.addEventListener("click", function() {selectHole(Number(this.innerText))})
+            table.querySelector(".hole-number").appendChild(td)
+
+            // score cell
+            td = document.createElement("td")
+            td.id = `hole-score-${holeNumber}`
+            td.holeNumber = holeNumber
+            td.addEventListener("click", function() {selectHole(Number(this.holeNumber))})
+            table.querySelector(".hole-score").appendChild(td)
+        }
+    })
+
+    // add or subtract one from score
+    function updateScore(holeNumber, update) {
+
+        // update hole score
+        const td = document.querySelector(`#hole-score-${holeNumber}`)        
+        const newScore = Number(td.innerText) + update
+        td.innerText = newScore > 0? String(newScore) : " "
+
+        // this assumes the "hole" feature is the first in the array of features for each hole
+        const par = holeNumber => holeFeatures[holeNumber][0].properties.par
+
+        // update totals
+        function computeScore(start) {
+            for (var holeNumber = start, total = 0, toPar = 0, i = 0; i < 9; i++, holeNumber++) {
+                const score = Number(document.querySelector(`#hole-score-${holeNumber}`).innerText)
+                total += score
+                if (score > 0)
+                    toPar += score - par(holeNumber)
+            }
+            return [total, toPar]
+        }                
+        const [outTotal, outToPar] = computeScore(1)
+        const [inTotal, inToPar] = computeScore(10)
+
+        const total = outTotal + inTotal
+        const fmtToPar = toPar => toPar == 0? "E": toPar > 0? "+" + toPar : toPar
+        const toPar = inToPar + outToPar
+
+        document.querySelector("#out-score").innerText = outTotal > 0? outTotal : ""
+        document.querySelector("#in-score").innerText = inTotal > 0? inTotal : ""
+        document.querySelector("#total-score").innerText = inTotal>0 && outTotal>0? total : ""
+
+        document.querySelector("#out-to-par").innerText = outTotal>0? fmtToPar(outToPar) : ""
+        document.querySelector("#in-to-par").innerText = inTotal>0? fmtToPar(inToPar) : ""
+        document.querySelector("#total-to-par").innerText = outTotal>0 && inTotal>0? fmtToPar(toPar) : ""
+    }
+
+    // set up button click handlers
+    document.querySelector("#plus").addEventListener("click", () => updateScore(selectedHole, +1))
+    document.querySelector("#minus").addEventListener("click", () => updateScore(selectedHole, -1))
+}
+
+
+
+////////////////////////////////////////////////////////////
+//
+// courses
+//
 
 // do an Overpass query against OSM data
 async function query(q) {
@@ -375,66 +525,6 @@ function manageCourses()  {
 }
 
 
-function defineIcon(width, height, url) {
-    return L.Icon.extend({
-        options: {
-            iconSize: [width, height],
-            iconAnchor: [width/2, height/2],
-            iconUrl: url,
-        }
-    })
-}
-
-const CrosshairIcon = defineIcon(30, 30, "crosshair.png")
-
-function resetPath() {
-    for (const marker of pathMarkers)
-        if (marker != locationMarker)
-            marker.remove()
-    pathMarkers = locationMarker? [locationMarker] : []
-    updateLine()
-}
-
-// draw a line connecting markers and update distance info
-// only use the location marker if it's visible in the current viewport
-function updateLine() {
-
-    // update the polyline
-    const useMarkers = pathMarkers.filter(m => m!=locationMarker || theMap.getBounds().contains(m.getLatLng()))
-    const lls = useMarkers.map(m => m.getLatLng())
-    pathLine.setLatLngs(lls)
-    
-    // update the distance info
-    for (const m of pathMarkers)
-        m.unbindTooltip()
-    for (var i = 1; i < useMarkers.length; i++) {
-        const distance = turf.distance(turf_point(useMarkers[i-1]), turf_point(useMarkers[i]), {units: "yards"})
-        const tip = Math.round(distance) + " yd"
-        useMarkers[i].bindTooltip(tip, {
-            permanent: true,
-            direction: "right",
-            offset: L.point([20, 0]),
-            className: "distance-info"
-        })
-    }
-}
-
-function svgIcon(innerSvg, className) {
-    const icon = L.divIcon({
-        html: `
-          <svg class="${className}">
-            ${innerSvg}
-          </svg>
-        `,
-        iconSize: [0, 0],
-        iconAnchor: [0, 0],
-        //style: {overflow: visible},
-        className: "svg-icon",
-    })
-    return icon
-}
-
-
 // move the locationMarker, optionally centering it
 function moveLocationMarker(loc, center) {
     const latlon = [loc.coords.latitude, loc.coords.longitude]
@@ -447,6 +537,13 @@ function moveLocationMarker(loc, center) {
     lastLoc = loc
     updateLine()
 }
+
+////////////////////////////////////////////////////////////
+//
+// location
+//
+
+
 
 // center the current location in the map and reset markers
 async function goToCurrentLocation() {
@@ -525,73 +622,6 @@ async function manageLocation() {
 
 }
 
-function manageScorecard() {
-
-    // two tables, front and back nine
-    var holeNumber = 1
-    document.querySelectorAll(".scorecard").forEach(table => {
-
-        for (var i = 0; i < 9; i++, holeNumber++) {
-
-            // hole number cell
-            var td = document.createElement("td")
-            td.innerText = holeNumber
-            td.id = `hole-number-${holeNumber}`
-            td.addEventListener("click", function() {selectHole(Number(this.innerText))})
-            table.querySelector(".hole-number").appendChild(td)
-
-            // score cell
-            td = document.createElement("td")
-            td.id = `hole-score-${holeNumber}`
-            td.holeNumber = holeNumber
-            td.addEventListener("click", function() {selectHole(Number(this.holeNumber))})
-            table.querySelector(".hole-score").appendChild(td)
-        }
-    })
-
-    // add or subtract one from score
-    function updateScore(holeNumber, update) {
-
-        // update hole score
-        const td = document.querySelector(`#hole-score-${holeNumber}`)        
-        const newScore = Number(td.innerText) + update
-        td.innerText = newScore > 0? String(newScore) : " "
-
-        // this assumes the "hole" feature is the first in the array of features for each hole
-        const par = holeNumber => holeFeatures[holeNumber][0].properties.par
-
-        // update totals
-        function computeScore(start) {
-            for (var holeNumber = start, total = 0, toPar = 0, i = 0; i < 9; i++, holeNumber++) {
-                const score = Number(document.querySelector(`#hole-score-${holeNumber}`).innerText)
-                total += score
-                if (score > 0)
-                    toPar += score - par(holeNumber)
-            }
-            return [total, toPar]
-        }                
-        const [outTotal, outToPar] = computeScore(1)
-        const [inTotal, inToPar] = computeScore(10)
-
-        const total = outTotal + inTotal
-        const fmtToPar = toPar => toPar == 0? "E": toPar > 0? "+" + toPar : toPar
-        const toPar = inToPar + outToPar
-
-        document.querySelector("#out-score").innerText = outTotal > 0? outTotal : ""
-        document.querySelector("#in-score").innerText = inTotal > 0? inTotal : ""
-        document.querySelector("#total-score").innerText = inTotal>0 && outTotal>0? total : ""
-
-        document.querySelector("#out-to-par").innerText = outTotal>0? fmtToPar(outToPar) : ""
-        document.querySelector("#in-to-par").innerText = inTotal>0? fmtToPar(inToPar) : ""
-        document.querySelector("#total-to-par").innerText = outTotal>0 && inTotal>0? fmtToPar(toPar) : ""
-    }
-
-    // set up button click handlers
-    document.querySelector("#plus").addEventListener("click", () => updateScore(selectedHole, +1))
-    document.querySelector("#minus").addEventListener("click", () => updateScore(selectedHole, -1))
-}
-
-
 async function show() {
 
     document.body.innerHTML = `
@@ -625,7 +655,7 @@ async function show() {
     const scorecardElt = document.querySelector("#scorecard")
     const locateElt = document.querySelector("#locate")
 
-    await loadMap(mapElt, true, true)
+    await loadMap(mapElt)
     await manageScorecard()
     await manageLocation()
     await manageCourses()

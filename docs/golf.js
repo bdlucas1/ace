@@ -3,17 +3,6 @@
 const print = console.log
 const printj = (j) => print(JSON.stringify(j, null, 2))
 
-var courseMarkers
-
-var selectedHole
-var selectedHoleLayer
-var holeFeatures
-
-var locationMarker = undefined
-var accuracyMarker = undefined
-var pathMarkers = []
-var pathLine
-
 const holeZoom = 17
 const courseZoom = 15
 const selectCourseZoom = 11
@@ -179,52 +168,12 @@ function loadMap(elt, layerControl = true, locateControl = false) {
 
 ////////////////////////////////////////////////////////////
 //
-// path
+// scorecard, selected hole
 //
 
-
-function resetPath() {
-    for (const marker of pathMarkers)
-        if (marker != locationMarker)
-            marker.remove()
-    pathMarkers = locationMarker? [locationMarker] : []
-    updateLine()
-}
-
-// draw a line connecting markers and update distance info
-// only use the location marker if it's visible in the current viewport
-function updateLine() {
-
-    // update the polyline
-    const useMarkers = pathMarkers.filter(m => m!=locationMarker || theMap.getBounds().contains(m.getLatLng()))
-    const lls = useMarkers.map(m => m.getLatLng())
-    pathLine.setLatLngs(lls)
-    
-    // update the distance info
-    for (const m of pathMarkers)
-        m.unbindTooltip()
-    for (var i = 1; i < useMarkers.length; i++) {
-        const distance = turf.distance(turf_point(useMarkers[i-1]), turf_point(useMarkers[i]), {units: "yards"})
-        const tip = Math.round(distance) + " yd"
-        useMarkers[i].bindTooltip(tip, {
-            permanent: true,
-            direction: "right",
-            offset: L.point([20, 0]),
-            className: "distance-info"
-        })
-    }
-}
-
-
-
-
-
-
-
-////////////////////////////////////////////////////////////
-//
-// scorecard
-//
+var selectedHole
+var selectedHoleLayer
+var holeFeatures
 
 async function selectHole(holeNumber) {
 
@@ -338,8 +287,144 @@ function manageScorecard() {
 
 ////////////////////////////////////////////////////////////
 //
+// path and location
+//
+
+var locationMarker = undefined
+var accuracyMarker = undefined
+var pathMarkers = []
+var pathLine
+
+// draw a line connecting markers and update distance info
+// only use the location marker if it's visible in the current viewport
+function updateLine() {
+
+    // update the polyline
+    const useMarkers = pathMarkers.filter(m => m!=locationMarker || theMap.getBounds().contains(m.getLatLng()))
+    const lls = useMarkers.map(m => m.getLatLng())
+    pathLine.setLatLngs(lls)
+    
+    // update the distance info
+    for (const m of pathMarkers)
+        m.unbindTooltip()
+    for (var i = 1; i < useMarkers.length; i++) {
+        const distance = turf.distance(turf_point(useMarkers[i-1]), turf_point(useMarkers[i]), {units: "yards"})
+        const tip = Math.round(distance) + " yd"
+        useMarkers[i].bindTooltip(tip, {
+            permanent: true,
+            direction: "right",
+            offset: L.point([20, 0]),
+            className: "distance-info"
+        })
+    }
+}
+
+function resetPath() {
+    for (const marker of pathMarkers)
+        if (marker != locationMarker)
+            marker.remove()
+    pathMarkers = locationMarker? [locationMarker] : []
+    updateLine()
+}
+
+// move the locationMarker, optionally centering it
+function moveLocationMarker(loc, center) {
+    const latlon = [loc.coords.latitude, loc.coords.longitude]
+    print("moving location marker to", latlon, "centering", center, "accuracy", loc.coords.accuracy, "m")
+    locationMarker.setLatLng(latlon)
+    accuracyMarker.setLatLng(latlon)
+    accuracyMarker.setRadius(loc.coords.accuracy)
+    if (center)
+        theMap.setView(latlon)
+    lastLoc = loc
+    updateLine()
+}
+
+// center the current location in the map and reset markers
+async function goToCurrentLocation() {
+    
+    // center on current position
+    const loc = await getPos()
+    moveLocationMarker(loc, true)
+    
+    // remove other markers
+    resetPath()
+}
+
+async function manageLocation() {
+    
+    // set up location and accuracy marker, and polyline
+    locationMarker = L.marker([0,0], {icon: new CrosshairIcon()}).addTo(theMap)
+    accuracyMarker = L.circleMarker([0,0], {
+        radius: 100,
+        color: "blue", opacity: 0.3,
+        fillColor: "blue", fillOpacity: 0.1,
+    }).addTo(theMap)
+    pathLine = L.polyline([], {className: "path-line"}).addTo(theMap)
+    
+    // watch for position changes, and update locationMarker accordingly
+    // this does not center the locationMarker
+    // if lastLoc is already set then it will be a test position so we don't
+    // watch actual position
+    if (!lastLoc) {
+        navigator.geolocation.watchPosition(
+            (loc) => moveLocationMarker(loc, false),
+            print,
+            {enableHighAccuracy: true}
+        )
+    }
+
+    // locate button moves map to current location
+    const locateButton = document.querySelector("#locate")
+    locateButton.innerHTML = "<img src='crosshair.png'></img>"
+    locateButton.addEventListener("click", goToCurrentLocation)
+
+    // clicking on map adds a marker
+    const markerIcon = svgIcon("<circle>", "path-marker")
+    theMap.on("click", function(e) {
+
+        print("click map")
+
+        // create marker
+        const marker = L.marker(e.latlng, {
+            icon: markerIcon,
+            draggable: true,
+            autoPan: false,
+            autoPanOnFocus: false, // https://github.com/Raruto/leaflet-rotate/issues/28
+        }).addTo(theMap)
+        pathMarkers.push(marker)
+
+        // redraw line and update distance info to include new marker
+        updateLine()
+
+        // clicking marker removes it
+        marker.on("click", () => {
+            print("click marker")
+            marker.remove()
+            pathMarkers = pathMarkers.filter(m => m !== marker)
+            updateLine()
+        })
+
+        // dragging marker updates line
+        marker.on("drag", (e) => {
+            print("drag")
+            updateLine()
+        })
+    })
+
+    // initial location
+    await goToCurrentLocation()
+
+}
+
+
+////////////////////////////////////////////////////////////
+//
 // courses
 //
+
+// for selecting courses
+var courseMarkers
 
 // do an Overpass query against OSM data
 async function query(q) {
@@ -525,102 +610,10 @@ function manageCourses()  {
 }
 
 
-// move the locationMarker, optionally centering it
-function moveLocationMarker(loc, center) {
-    const latlon = [loc.coords.latitude, loc.coords.longitude]
-    print("moving location marker to", latlon, "centering", center, "accuracy", loc.coords.accuracy, "m")
-    locationMarker.setLatLng(latlon)
-    accuracyMarker.setLatLng(latlon)
-    accuracyMarker.setRadius(loc.coords.accuracy)
-    if (center)
-        theMap.setView(latlon)
-    lastLoc = loc
-    updateLine()
-}
-
 ////////////////////////////////////////////////////////////
 //
-// location
+// entry point
 //
-
-
-
-// center the current location in the map and reset markers
-async function goToCurrentLocation() {
-    
-    // center on current position
-    const loc = await getPos()
-    moveLocationMarker(loc, true)
-    
-    // remove other markers
-    resetPath()
-}
-
-async function manageLocation() {
-    
-    // set up location and accuracy marker, and polyline
-    locationMarker = L.marker([0,0], {icon: new CrosshairIcon()}).addTo(theMap)
-    accuracyMarker = L.circleMarker([0,0], {
-        radius: 100,
-        color: "blue", opacity: 0.3,
-        fillColor: "blue", fillOpacity: 0.1,
-    }).addTo(theMap)
-    pathLine = L.polyline([], {className: "path-line"}).addTo(theMap)
-    
-    // watch for position changes, and update locationMarker accordingly
-    // this does not center the locationMarker
-    // if lastLoc is already set then it will be a test position so we don't
-    // watch actual position
-    if (!lastLoc) {
-        navigator.geolocation.watchPosition(
-            (loc) => moveLocationMarker(loc, false),
-            print,
-            {enableHighAccuracy: true}
-        )
-    }
-
-    // locate button moves map to current location
-    const locateButton = document.querySelector("#locate")
-    locateButton.innerHTML = "<img src='crosshair.png'></img>"
-    locateButton.addEventListener("click", goToCurrentLocation)
-
-    // clicking on map adds a marker
-    const markerIcon = svgIcon("<circle>", "path-marker")
-    theMap.on("click", function(e) {
-
-        print("click map")
-
-        // create marker
-        const marker = L.marker(e.latlng, {
-            icon: markerIcon,
-            draggable: true,
-            autoPan: false,
-            autoPanOnFocus: false, // https://github.com/Raruto/leaflet-rotate/issues/28
-        }).addTo(theMap)
-        pathMarkers.push(marker)
-
-        // redraw line and update distance info to include new marker
-        updateLine()
-
-        // clicking marker removes it
-        marker.on("click", () => {
-            print("click marker")
-            marker.remove()
-            pathMarkers = pathMarkers.filter(m => m !== marker)
-            updateLine()
-        })
-
-        // dragging marker updates line
-        marker.on("drag", (e) => {
-            print("drag")
-            updateLine()
-        })
-    })
-
-    // initial location
-    await goToCurrentLocation()
-
-}
 
 async function show() {
 

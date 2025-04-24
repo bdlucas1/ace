@@ -85,16 +85,16 @@ function loadMap(elt, layerControl = true, locateControl = false) {
     }
 
     // create the map
-    var currentLayerNumber = 0
     map = L.map(elt, {
         rotate: true,
         zoomSnap: 0.2,
         zoomControl: false,
         rotateControl: false,
-        layers: Object.values(baseMaps)[currentLayerNumber],
     }).setZoom(selectCourseZoom)
 
     // our own layer switcher
+    var currentLayerNumber = 0
+    map.addLayer(Object.values(baseMaps)[currentLayerNumber])
     document.querySelector("#layer").addEventListener("click", () => {
         map.removeLayer(Object.values(baseMaps)[currentLayerNumber])
         currentLayerNumber = (currentLayerNumber + 1) % 3 // TODO

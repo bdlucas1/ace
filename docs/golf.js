@@ -3,9 +3,6 @@
 const print = console.log
 const printj = (j) => print(JSON.stringify(j, null, 2))
 
-var map
-var baseMaps
-
 var lastLoc = undefined
 
 var courseMarkers
@@ -24,7 +21,12 @@ const courseZoom = 15
 const selectCourseZoom = 11
 
 
+//
 // set up our map using Leaflet
+//
+
+var theMap
+
 function loadMap(elt, layerControl = true, locateControl = false) {
 
     // Thunderforest maps
@@ -72,20 +74,22 @@ function loadMap(elt, layerControl = true, locateControl = false) {
     }
 
     // these will be presented in the layer switch control
-    const baseMaps = {
-        "OSM": OSM(),
-        "MapTiler satellite": mapTiler(),
-        "MapBox satellite": mapBox("mapbox/satellite-streets-v12"),
+    const baseMaps = [
+        OSM(),
+        mapTiler(),
+        mapBox("mapbox/satellite-streets-v12"),
+        /*
         "Thunderforest landscape": thunderForest("landscape"),
         "MapBox outdoors": mapBox("mapbox/outdoors-v12"),
         "MapBox custom": mapBox("bdlucas1/ckyqokvgx03so14kg7zgkvfsd"),
         "USGS topo": USGS("USGSTopo"),
         "USGS imagery": USGS("USGSImageryOnly"),
         "USGS imagery topo": USGS("USGSImageryTopo"),
-    }
+        */
+    ]
 
     // create the map
-    map = L.map(elt, {
+    theMap = L.map(elt, {
         rotate: true,
         zoomSnap: 0.2,
         zoomControl: false,
@@ -94,12 +98,12 @@ function loadMap(elt, layerControl = true, locateControl = false) {
 
     // our own layer switcher
     var currentLayerNumber = 0
-    map.addLayer(Object.values(baseMaps)[currentLayerNumber])
+    theMap.addLayer(baseMaps[currentLayerNumber])
     document.querySelector("#layer").addEventListener("click", () => {
-        map.removeLayer(Object.values(baseMaps)[currentLayerNumber])
+        theMap.removeLayer(baseMaps[currentLayerNumber])
         currentLayerNumber = (currentLayerNumber + 1) % 3 // TODO
         print("switching to layer", currentLayerNumber)
-        map.addLayer(Object.values(baseMaps)[currentLayerNumber])
+        theMap.addLayer(baseMaps[currentLayerNumber])
     })
 }
 
@@ -128,19 +132,19 @@ async function selectHole(holeNumber) {
     const feature = holeFeatures[holeNumber][0]
     const coordinates = feature.geometry.coordinates
     const bearing = turf.bearing(coordinates[0], coordinates[coordinates.length - 1])
-    await map.setBearing(-bearing)
+    await theMap.setBearing(-bearing)
     
     // select and show hole features
     if (selectedHoleLayer)
-        map.removeLayer(selectedHoleLayer)
+        theMap.removeLayer(selectedHoleLayer)
     selectedHoleLayer = L.geoJSON(holeFeatures[holeNumber], {
         style: feature => {return {className: `golf-${feature.properties.golf}`}}
-    }).addTo(map);
+    }).addTo(theMap);
 
     // center hole on map
     const center = turf.center({type: "FeatureCollection", features: holeFeatures[holeNumber]})
     const [lon, lat] = center.geometry.coordinates
-    map.setView([lat, lon], holeZoom)
+    theMap.setView([lat, lon], holeZoom)
     resetPath()
 
 }
@@ -260,7 +264,7 @@ async function loadCourse(name, latlon) {
 
     // show the course
     print("setview", latlon)
-    map.setView(latlon, courseZoom)
+    theMap.setView(latlon, courseZoom)
 
 }
 
@@ -272,9 +276,9 @@ function manageCourses()  {
         // clean slate
         if (courseMarkers)
             courseMarkers.remove()
-        courseMarkers = L.layerGroup().addTo(map)
+        courseMarkers = L.layerGroup().addTo(theMap)
         resetPath()
-        map.setBearing(0)
+        theMap.setBearing(0)
 
         // snap to tile boundaries
         const tile_size = 0.25 // needs to be power of 2
@@ -282,7 +286,7 @@ function manageCourses()  {
         const up = x => Math.floor((x+tile_size)/tile_size)*tile_size
 
         // compute bounding box snapped to tiles of size tile_size deg
-        const bounds = map.getBounds()
+        const bounds = theMap.getBounds()
         const south = dn(bounds.getSouth())
         const west = dn(bounds.getWest())
         const north = up(bounds.getNorth())
@@ -303,7 +307,7 @@ function manageCourses()  {
                         loadCourse(course_name, latlon)
                         return // TODO: break?
                     }
-                    const marker = L.marker(latlon).addTo(map).on("click", () => {
+                    const marker = L.marker(latlon).addTo(theMap).on("click", () => {
                         courseMarkers.remove()
                         loadCourse(course_name, latlon)
                     }).addTo(courseMarkers)
@@ -390,7 +394,7 @@ function turf_distance(a, b) {
 function updateLine() {
 
     // update the polyline
-    const useMarkers = pathMarkers.filter(m => m!=locationMarker || map.getBounds().contains(m.getLatLng()))
+    const useMarkers = pathMarkers.filter(m => m!=locationMarker || theMap.getBounds().contains(m.getLatLng()))
     const lls = useMarkers.map(m => m.getLatLng())
     pathLine.setLatLngs(lls)
     
@@ -433,7 +437,7 @@ function moveLocationMarker(loc, center) {
     accuracyMarker.setLatLng(latlon)
     accuracyMarker.setRadius(loc.coords.accuracy)
     if (center)
-        map.setView(latlon)
+        theMap.setView(latlon)
     lastLoc = loc
     updateLine()
 }
@@ -452,13 +456,13 @@ async function goToCurrentLocation() {
 async function manageLocation() {
     
     // set up location and accuracy marker, and polyline
-    locationMarker = L.marker([0,0], {icon: new CrosshairIcon()}).addTo(map)
+    locationMarker = L.marker([0,0], {icon: new CrosshairIcon()}).addTo(theMap)
     accuracyMarker = L.circleMarker([0,0], {
         radius: 100,
         color: "blue", opacity: 0.3,
         fillColor: "blue", fillOpacity: 0.1,
-    }).addTo(map)
-    pathLine = L.polyline([], {className: "path-line"}).addTo(map)
+    }).addTo(theMap)
+    pathLine = L.polyline([], {className: "path-line"}).addTo(theMap)
     
     // watch for position changes, and update locationMarker accordingly
     // this does not center the locationMarker
@@ -479,7 +483,7 @@ async function manageLocation() {
 
     // clicking on map adds a marker
     const markerIcon = svgIcon("<circle>", "path-marker")
-    map.on("click", function(e) {
+    theMap.on("click", function(e) {
 
         print("click map")
 
@@ -489,7 +493,7 @@ async function manageLocation() {
             draggable: true,
             autoPan: false,
             autoPanOnFocus: false, // https://github.com/Raruto/leaflet-rotate/issues/28
-        }).addTo(map)
+        }).addTo(theMap)
         pathMarkers.push(marker)
 
         // redraw line and update distance info to include new marker

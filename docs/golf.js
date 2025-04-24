@@ -3,8 +3,6 @@
 const print = console.log
 const printj = (j) => print(JSON.stringify(j, null, 2))
 
-var lastLoc = undefined
-
 var courseMarkers
 
 var selectedHole
@@ -21,6 +19,50 @@ const courseZoom = 15
 const selectCourseZoom = 11
 
 
+////////////////////////////////////////////////////////////
+//
+// utility
+//
+
+// return current pos
+var lastLoc
+async function getPos() {
+    if (lastLoc) {
+        // use last reported by watchPosition
+        return lastLoc;
+    } else {
+        // otherwise ask
+        const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {enableHighAccuracy: true})
+        })
+        return pos
+    }
+}
+
+// turf point from various other representations
+function turf_point(ll) {
+    if (ll.getLatLng) {
+        const {lat, lng} = ll.getLatLng()
+        return turf.point([lng, lat])
+    } else if (Array.isArray(ll) && ll.length==2) {
+        const [lat, lon] = ll
+        return turf.point([lon, lat])
+    } else if (ll.coords) {
+        const {latitude: lat, longitude: lon} = ll.coords
+        return turf.point([lon, lat])
+    } else {
+        // TODO: hope for the best?
+        return ll
+    }
+}
+
+// TODO: use this everywhere
+function turf_distance(a, b) {
+    return turf.distance(turf_point(a), turf_point(b), {units: "meters"})
+}
+
+
+////////////////////////////////////////////////////////////
 //
 // set up our map using Leaflet
 //
@@ -351,42 +393,6 @@ function resetPath() {
             marker.remove()
     pathMarkers = locationMarker? [locationMarker] : []
     updateLine()
-}
-
-// return current pos
-async function getPos() {
-    if (lastLoc) {
-        // use last reported by watchPosition
-        return lastLoc;
-    } else {
-        // otherwise ask
-        const pos = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {enableHighAccuracy: true})
-        })
-        return pos
-    }
-}
-
-// turf point from various other representations
-function turf_point(ll) {
-    if (ll.getLatLng) {
-        const {lat, lng} = ll.getLatLng()
-        return turf.point([lng, lat])
-    } else if (Array.isArray(ll) && ll.length==2) {
-        const [lat, lon] = ll
-        return turf.point([lon, lat])
-    } else if (ll.coords) {
-        const {latitude: lat, longitude: lon} = ll.coords
-        return turf.point([lon, lat])
-    } else {
-        // TODO: hope for the best?
-        return ll
-    }
-}
-
-// TODO: use this everywhere
-function turf_distance(a, b) {
-    return turf.distance(turf_point(a), turf_point(b), {units: "meters"})
 }
 
 // draw a line connecting markers and update distance info

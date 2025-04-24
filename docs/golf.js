@@ -1,8 +1,5 @@
 "use strict";
 
-const print = console.log
-const printj = (j) => print(JSON.stringify(j, null, 2))
-
 const holeZoom = 17
 const courseZoom = 15
 const selectCourseZoom = 11
@@ -12,6 +9,9 @@ const selectCourseZoom = 11
 //
 // utility
 //
+
+const print = console.log
+const printj = (j) => print(JSON.stringify(j, null, 2))
 
 // return current pos
 var lastLoc
@@ -34,6 +34,7 @@ function turf_point(ll) {
         const {lat, lng} = ll.getLatLng()
         return turf.point([lng, lat])
     } else if (Array.isArray(ll) && ll.length==2) {
+        // TODO: this is dangerous as tuples are not always lat,lon
         const [lat, lon] = ll
         return turf.point([lon, lat])
     } else if (ll.coords) {
@@ -617,6 +618,7 @@ function manageCourses()  {
 
 async function show() {
 
+    // TODO: move score-row to manageScorecard
     document.body.innerHTML = `
         <div id="layout">
           <div id="map"></div>
@@ -662,7 +664,6 @@ if (url.searchParams.has("testLoc")) {
     lastLoc = {coords: {latitude: Number(lat), longitude: Number(lon), accuracy: 10}} 
     print(lastLoc)
 }
-
 
 show()
 

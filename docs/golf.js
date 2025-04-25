@@ -734,8 +734,6 @@ async function show() {
     await manageScorecard()
     await manageLocation()
     await manageCourses()
-
-    foo()
 }
 
 

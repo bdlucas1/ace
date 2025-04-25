@@ -151,17 +151,39 @@ html, body {
 
     /*background: red;*/
     z-index: 100;
+    padding: 1em;
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
 
-    * {
+    > * {
         background: var(--background);
         color: white;
-        margin: 1em;
         padding: 0.5em;
         border-radius: 10px;
-        font-family: sans-serif;
-        font-size: 18px;
         border: 1px solid gray;
         box-shadow: 3px 5px 10px gray;
     }
+
+    .settings-button {
+        font-family: sans-serif;
+        font-size: 18px;
+    }
+
+    #console {
+
+        font-family: sans-serif;
+        font-size: 12px;
+        padding: 0.5em;
+        justify-self: flex-end;
+        margin-top: auto;
+        height: 50%;
+        overflow: scroll;
+
+        .console-error {
+            background: #702000;
+        }
+    }
+
 
 }

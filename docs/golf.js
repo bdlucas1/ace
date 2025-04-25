@@ -10,6 +10,34 @@ const selectCourseZoom = 11
 // utility
 //
 
+function divlog(kind, text) {
+}
+
+function intercept(fun) {
+    var oldFun = console[fun]
+    console[fun] = (...args) => {
+        oldFun(...args)
+        //divLog(fun, args.join(" ")
+        const consoleElt =  document.querySelector("#console")
+        if (consoleElt) {
+            const elt = document.createElement("div")
+            elt.classList.add("console-" + fun)
+            elt.innerText = args.join(" ")
+            consoleElt.appendChild(elt)
+            elt.scrollIntoView()
+        } else {
+            oldFun("no console element")
+        }
+    }
+}
+
+// intercept stuff to send it to our console element
+for (const fun of ["log", "info", "warning", "error", "trace", "debug"])
+    intercept(fun)
+window.onerror = e => console.error(e)
+window.onunhandledrejection = e => console.error(e.reason.stack)
+
+
 const print = console.log
 const printj = (j) => print(JSON.stringify(j, null, 2))
 
@@ -195,7 +223,8 @@ async function manageSettings() {
     function addSetting(text, action) {
         const itemElt = document.createElement("div")
         itemElt.innerText = text
-        settingsElt.appendChild(itemElt)
+        itemElt.classList.add("settings-button")
+        settingsElt.insertBefore(itemElt, document.querySelector("#console"))
         itemElt.addEventListener("click", action)
     }
 
@@ -208,10 +237,10 @@ async function manageSettings() {
 
     // manage settings menu display
     var showing = false
-    settingsElt.style.display = "none"
+    settingsElt.style.visibility = "hidden"
     const toggleSettings = () => {
         showing = !showing
-        settingsElt.style.display = showing? "block" : "none";
+        settingsElt.style.visibility = showing? "visible" : "hidden";
     }
 
     // set up show-settings button
@@ -676,7 +705,9 @@ async function show() {
           <div class="main-button" id="select-course"></div>
           <div class="main-button" id="show-settings"></div>
           <div id="map"></div>
-          <div id="settings"></div>
+          <div id="settings">
+              <div id="console"></div>
+          </div>
           <div id="score-row">
               <table class="scorecard"><tr class="hole-number"><tr class="hole-score"></table>
               <table class="scorecard"><tr class="hole-number"><tr class="hole-score"></table>
@@ -705,7 +736,10 @@ async function show() {
     await manageScorecard()
     await manageLocation()
     await manageCourses()
+
+    foo()
 }
+
 
 // parse parameters
 const url = new URL(document.baseURI)
@@ -717,4 +751,5 @@ if (url.searchParams.has("testLoc")) {
 }
 
 show()
+
 

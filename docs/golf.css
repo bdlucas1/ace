@@ -178,6 +178,7 @@ html, body {
         justify-self: flex-end;
         margin-top: auto;
         height: 50%;
+        max-height: 50%;
         overflow: scroll;
 
         > * {

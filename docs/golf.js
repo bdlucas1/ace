@@ -10,32 +10,30 @@ const selectCourseZoom = 11
 // utility
 //
 
-function divlog(kind, text) {
+function divLog(kind, ...args) {
+    const consoleElt =  document.querySelector("#console")
+    if (consoleElt) {
+        const elt = document.createElement("div")
+        elt.classList.add("console-" + kind)
+        elt.innerText = args.join(" ")
+        consoleElt.appendChild(elt)
+        elt.scrollIntoView()
+    }
 }
 
 function intercept(fun) {
     var oldFun = console[fun]
     console[fun] = (...args) => {
         oldFun(...args)
-        //divLog(fun, args.join(" ")
-        const consoleElt =  document.querySelector("#console")
-        if (consoleElt) {
-            const elt = document.createElement("div")
-            elt.classList.add("console-" + fun)
-            elt.innerText = args.join(" ")
-            consoleElt.appendChild(elt)
-            elt.scrollIntoView()
-        } else {
-            oldFun("no console element")
-        }
+        divLog(fun, ...args)
     }
 }
 
 // intercept stuff to send it to our console element
 for (const fun of ["log", "info", "warning", "error", "trace", "debug"])
     intercept(fun)
-window.onerror = e => console.error(e)
-window.onunhandledrejection = e => console.error(e.reason.stack)
+window.onerror = e => divLog("error", e)
+window.onunhandledrejection = e => divLog("error", e.reason.stack)
 
 
 const print = console.log

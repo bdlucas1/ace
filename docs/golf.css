@@ -6,7 +6,8 @@ html, body {
     min-height: -webkit-fill-available;
     max-height: 800px;
     margin: 0;
-    background: #003300;
+    --background: #003300;
+    background: var(--background);
 }
 
 #layout {
@@ -20,17 +21,20 @@ html, body {
 
     /* rows and columns */
     grid-template-rows: auto auto 1fr;
-    grid-template-columns: auto auto auto 1fr auto auto;
-    #layer {grid-row: 1; grid-column: 1;}
-    #locate {grid-row: 1; grid-column: 2;}
+    grid-template-columns: auto 1fr auto auto auto 1fr auto auto;
+
+    #show-settings {grid-row: 1; grid-column: 1}
     #select-course {grid-row: 1; grid-column: 3;}
-    #minus {grid-row: 1; grid-column: 5;}
-    #plus {grid-row: 1; grid-column: 6;}
+    #locate {grid-row: 1; grid-column: 4;}
+    #layer {grid-row: 1; grid-column: 5;}
+    #minus {grid-row: 1; grid-column: 7;}
+    #plus {grid-row: 1; grid-column: 8;}
     #score-row {grid-row: 2; grid-column: 1 / -1;}
-    #map {grid-row: 3; grid-column: 1 / -1;}
+    #map, #settings {grid-row: 3; grid-column: 1 / -1;}
 }
 
-#plus, #minus, #layer, #locate, #select-course {
+/*#plus, #minus, #layer, #locate, #select-course, #show-course {*/
+.main-button {
     aspect-ratio: 1 / 1;
     height: 40px;
     line-height: 40px;
@@ -50,6 +54,7 @@ html, body {
 #plus::before {content: "+"; font-weight: bold;}
 #minus::before {content: "−"; font-weight: bold;}
 #layer::before {content: "❖";}
+#show-settings::before {content: "≡"; font-weight: bold;}
 
 #locate img {height: 85%;}
 #select-course img {height: 85%;}
@@ -100,6 +105,8 @@ html, body {
 
 #map {
 
+    z-index: 0;
+
     .golf-hole    {stroke: #00000000;}
     .golf-tee     {stroke: #777777; fill: #777777; fill-opacity: 0.2;}
     .golf-fairway {stroke: #005000; fill: #005000; fill-opacity: 0.2;}
@@ -140,8 +147,21 @@ html, body {
 
 }
 
+#settings {
 
+    /*background: red;*/
+    z-index: 100;
 
+    * {
+        background: var(--background);
+        color: white;
+        margin: 1em;
+        padding: 0.5em;
+        border-radius: 10px;
+        font-family: sans-serif;
+        font-size: 18px;
+        border: 1px solid gray;
+        box-shadow: 3px 5px 10px gray;
+    }
 
-
-
+}

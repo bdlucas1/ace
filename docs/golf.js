@@ -183,6 +183,43 @@ function loadMap(elt, layerControl = true, locateControl = false) {
 }
 
 
+//
+//
+// settings menu
+//
+
+async function manageSettings() {
+
+    // set up settings menu
+    const settingsElt = document.querySelector("#settings")
+    function addSetting(text, action) {
+        const itemElt = document.createElement("div")
+        itemElt.innerText = text
+        settingsElt.appendChild(itemElt)
+        itemElt.addEventListener("click", action)
+    }
+
+    // clear course data button
+    addSetting("Clear course data", () => {
+        print("clearing local storage")
+        localStorage.clear()
+        toggleSettings()
+    })
+
+    // manage settings menu display
+    var showing = false
+    settingsElt.style.display = "none"
+    const toggleSettings = () => {
+        showing = !showing
+        settingsElt.style.display = showing? "block" : "none";
+    }
+
+    // set up show-settings button
+    const settingsButton = document.querySelector("#show-settings")
+    settingsButton.addEventListener("click", toggleSettings)
+}
+
+
 ////////////////////////////////////////////////////////////
 //
 // scorecard, selected hole
@@ -530,14 +567,6 @@ async function loadCourse(name, latlon) {
             // other code depends on the "hole" feature being first in the features array
             const holeNumber = feature.properties.ref
             holeFeatures[holeNumber] = [feature]
-
-            // hack: extend line to first tee back because HB data is wrong
-            // TODO: data is fixed, use this for a while then delete this code
-            /*
-            const coordinates = feature.geometry.coordinates
-            const [[a, b], [c, d]] = [coordinates[0], coordinates[1]]
-            coordinates.unshift([a - 0.5*(c-a), b - 0.5*(d-b)])
-            */
         }
     }
 
@@ -640,7 +669,14 @@ async function show() {
     // TODO: move score-row to manageScorecard
     document.body.innerHTML = `
         <div id="layout">
+          <div class="main-button" id="plus"></div>
+          <div class="main-button" id="minus"></div>
+          <div class="main-button" id="layer"></div>
+          <div class="main-button" id="locate"></div>
+          <div class="main-button" id="select-course"></div>
+          <div class="main-button" id="show-settings"></div>
           <div id="map"></div>
+          <div id="settings"></div>
           <div id="score-row">
               <table class="scorecard"><tr class="hole-number"><tr class="hole-score"></table>
               <table class="scorecard"><tr class="hole-number"><tr class="hole-score"></table>
@@ -657,11 +693,6 @@ async function show() {
                   </tr>
               </table>
           </div>
-          <div id="plus"></div>
-          <div id="minus"></div>
-          <div id="layer"></div>
-          <div id="locate"></div>
-          <div id="select-course"></div>
         </div>
     `
     const layoutElt = document.querySelector("#layout")
@@ -670,6 +701,7 @@ async function show() {
     const locateElt = document.querySelector("#locate")
 
     await loadMap(mapElt)
+    await manageSettings()
     await manageScorecard()
     await manageLocation()
     await manageCourses()

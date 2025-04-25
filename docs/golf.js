@@ -99,21 +99,6 @@ function loadMap(elt, layerControl = true, locateControl = false) {
         return L.tileLayer(url, {attribution})
     }
 
-    // color scheme is not as clear as Thunderforest
-    // could be customized to be better
-    // would have to look into caching if made default
-    function mapBox(style) {
-        const token =
-              "pk.eyJ1IjoiYmRsdWNhczEiLCJhIjoiY2t5cW52dmI1MGx0ZjJ1cGV5NnM1eWw5NyJ9" +
-              ".1ig0mdAnI6dBI5MtVf-JKA"
-        const url = "https://api.mapbox.com/styles/v1/{style}/tiles/{z}/{x}/{y}{r}?access_token={token}"
-        const attribution = `
-            ©<a href='https://www.mapbox.com' target='_blank'>MapBox</a> |
-            ©<a href='https://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap</a>
-        `
-        return L.tileLayer(url, {attribution, style, token, maxZoom: 20})
-    }
-
     // USGS top maps
     function USGS(type, maxZoom=16) {
         const url = `https://basemap.nationalmap.gov/arcgis/rest/services/${type}/MapServer/tile/{z}/{y}/{x}`
@@ -127,16 +112,47 @@ function loadMap(elt, layerControl = true, locateControl = false) {
         return L.tileLayer(url, {maxZoom: 20})
     }
 
+    // seems to cache for 12h
+    // 200k free per billing period month
+    // I have billing information on file
+    function mapBox(style) {
+        const token =
+              "pk.eyJ1IjoiYmRsdWNhczEiLCJhIjoiY2t5cW52dmI1MGx0ZjJ1cGV5NnM1eWw5NyJ9" +
+              ".1ig0mdAnI6dBI5MtVf-JKA"
+        const url = "https://api.mapbox.com/styles/v1/{style}/tiles/{z}/{x}/{y}{r}?access_token={token}"
+        const attribution = `
+            ©<a href='https://www.mapbox.com' target='_blank'>MapBox</a> |
+            ©<a href='https://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap</a>
+        `
+        return L.tileLayer(url, {attribution, style, token, maxZoom: 20})
+    }
+
+    // seems to cache for 4h
+    // 100k free per month on free plan
+    // no billing on file - hard limit
+    // can limit by domain (?)
     function mapTiler() {
         const url = "https://api.maptiler.com/maps/satellite/{z}/{x}/{y}{r}.jpg?key=J95t1VSvDVTrfdsKsqyV"
+        return L.tileLayer(url, {maxZoom: 20})
+    }
+
+    // seems to cache for 24h
+    // no key, so no limit?
+    function ESRI() {
+        const url = "https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         return L.tileLayer(url, {maxZoom: 20})
     }
 
     // these will be presented in the layer switch control
     const baseMaps = [
         OSM(),
-        mapTiler(),
         mapBox("mapbox/satellite-streets-v12"),
+
+        /*
+        ESRI(),
+        mapTiler(),
+        */
+
         /*
         "Thunderforest landscape": thunderForest("landscape"),
         "MapBox outdoors": mapBox("mapbox/outdoors-v12"),
@@ -160,7 +176,7 @@ function loadMap(elt, layerControl = true, locateControl = false) {
     theMap.addLayer(baseMaps[currentLayerNumber])
     document.querySelector("#layer").addEventListener("click", () => {
         theMap.removeLayer(baseMaps[currentLayerNumber])
-        currentLayerNumber = (currentLayerNumber + 1) % 3 // TODO
+        currentLayerNumber = (currentLayerNumber + 1) % baseMaps.length
         print("switching to layer", currentLayerNumber)
         theMap.addLayer(baseMaps[currentLayerNumber])
     })

@@ -516,9 +516,12 @@ async function loadCourse(name, latlon) {
             holeFeatures[holeNumber] = [feature]
 
             // hack: extend line to first tee back because HB data is wrong
+            // TODO: data is fixed, use this for a while then delete this code
+            /*
             const coordinates = feature.geometry.coordinates
             const [[a, b], [c, d]] = [coordinates[0], coordinates[1]]
             coordinates.unshift([a - 0.5*(c-a), b - 0.5*(d-b)])
+            */
         }
     }
 

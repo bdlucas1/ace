@@ -454,14 +454,16 @@ async function updateLine() {
     for (const m of pathMarkers)
         m.unbindTooltip()
     for (var i = 1; i < useMarkers.length; i++) {
-        const distance = turf.distance(turf_point(useMarkers[i-1]), turf_point(useMarkers[i]), {units: "yards"})
-        const el1 = await getMarkerElevation(useMarkers[i-1])
-        const el2 = await getMarkerElevation(useMarkers[i])
-        const elChange = Math.round((el2 - el1) * 3.28084)
-        const elChangeString = elChange >= 0? "+" + elChange : String(elChange)
-        //const tip = Math.round(distance) + " yd"
-        const tip = `${Math.round(distance)} yd<br/>${elChangeString} ft`
-        useMarkers[i].bindTooltip(tip, {
+        const [m1, m2] = [useMarkers[i-1], useMarkers[i]]
+        const distanceYd = turf.distance(turf_point(m1), turf_point(m2), {units: "yards"})
+        const elChangeFt = ((await getMarkerElevation(m2)) - (await getMarkerElevation(m1))) * 3.28084
+        const playsLikeYd = distanceYd + elChangeFt / 3
+        const tip = `
+            ${Math.round(distanceYd)} yd <br/>
+            ${elChangeFt >= 0? "+" + Math.round(elChangeFt) : Math.round(elChangeFt)} ft <br/>
+            ${Math.round(playsLikeYd)} yd <br/>
+        `
+        m2.bindTooltip(tip, {
             permanent: true,
             direction: "right",
             offset: L.point([15, 0]),

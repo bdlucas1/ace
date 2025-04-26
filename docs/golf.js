@@ -155,6 +155,7 @@ function loadMap(elt, layerControl = true, locateControl = false) {
 
     // seems to cache for 24h
     // no key, no limit?
+    // actually goes to zoom 20, but that switches to a less appealing set of imagery
     function ESRI() {
         const url = "https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         return L.tileLayer(url, {maxZoom, maxNativeZoom: 19})

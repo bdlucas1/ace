@@ -55,7 +55,7 @@ async function getPos() {
 }
 
 // turf point from various other representations
-function turf_point(ll) {
+function turfPoint(ll) {
     if (ll.getLatLng) {
         const {lat, lng} = ll.getLatLng()
         return turf.point([lng, lat])
@@ -73,8 +73,8 @@ function turf_point(ll) {
 }
 
 // TODO: use this everywhere
-function turf_distance(a, b) {
-    return turf.distance(turf_point(a), turf_point(b), {units: "meters"})
+function turfDistance(a, b) {
+    return turf.distance(turfPoint(a), turfPoint(b), {units: "meters"})
 }
 
 function defineIcon(width, height, url) {
@@ -455,7 +455,7 @@ async function updateLine() {
         m.unbindTooltip()
     for (var i = 1; i < useMarkers.length; i++) {
         const [m1, m2] = [useMarkers[i-1], useMarkers[i]]
-        const distanceYd = turf.distance(turf_point(m1), turf_point(m2), {units: "yards"})
+        const distanceYd = turf.distance(turfPoint(m1), turfPoint(m2), {units: "yards"})
         const elChangeFt = ((await getMarkerElevation(m2)) - (await getMarkerElevation(m1))) * 3.28084
         const playsLikeYd = distanceYd + elChangeFt / 3
         const tip = `
@@ -536,8 +536,6 @@ async function manageLocation() {
     const markerIcon = svgIcon("<circle>", "path-marker")
     theMap.on("click", function(e) {
 
-        print("click map")
-
         // create marker
         const marker = L.marker(e.latlng, {
             icon: markerIcon,
@@ -552,7 +550,6 @@ async function manageLocation() {
 
         // clicking marker removes it
         marker.on("click", () => {
-            print("click marker")
             marker.remove()
             pathMarkers = pathMarkers.filter(m => m !== marker)
             updateLine()
@@ -580,17 +577,17 @@ async function manageLocation() {
 var courseMarkers
 
 // do an Overpass query against OSM data
-async function query(q) {
+async function query(query) {
 
-    const full_q = `
+    const fullQuery = `
         [out:json][timeout:25];
-           ${q}
+           ${query}
         out body;
         >;
         out skel qt;
     `
     const api = "https://overpass-api.de/api/interpreter"
-    const response = await fetch(api, {method: "POST", body: full_q,})
+    const response = await fetch(api, {method: "POST", body: fullQuery,})
     try {
         const response_json = await response.json()
         const geojson = osmtogeojson(response_json)
@@ -600,8 +597,7 @@ async function query(q) {
     }
 }
 
-// TODO: mechanism to clear cache. for now: at console, localStorage.clear()
-async function query_course_features(latlon, distance=5000) {
+async function queryCourseFeatures(latlon, distance=5000) {
 
     const [lat, lon] = latlon
 
@@ -620,7 +616,7 @@ async function query_course_features(latlon, distance=5000) {
 
 // TODO: need better strategy: cover visible map area with 0.1 deg tiles
 // instead of having a large
-async function query_courses(south, west, north, east) {
+async function queryCourses(south, west, north, east) {
     const q = `way[leisure=golf_course](${south},${west},${north},${east});`
     const courses = await query(q)
     const result = {}
@@ -632,7 +628,7 @@ async function query_courses(south, west, north, east) {
     return result
 }
 
-async function cache_json(key, fun) {
+async function cacheJSON(key, fun) {
     var value = localStorage.getItem(key)
     if (value) {
         print("using cached Overpass data for", key)
@@ -649,7 +645,7 @@ async function cache_json(key, fun) {
 async function loadCourse(name, latlon) {
 
     // get course data
-    const course = await cache_json(name, () => query_course_features(latlon))
+    const course = await cacheJSON(name, () => queryCourseFeatures(latlon))
 
     // group features by nearest hole into holeFeatures array
     // holeFeatures is indexed by hole number,
@@ -724,11 +720,11 @@ function manageCourses()  {
                 const n = s + tile_size
                 const e = w + tile_size
                 const key = s + "," + w + "," + n + "," + e
-                const courses = await cache_json(key, () => query_courses(s, w, n, e))
+                const courses = await cacheJSON(key, () => queryCourses(s, w, n, e))
                 for (const [course_name, latlon] of Object.entries(courses)) {
                     // if we're near course abort and just load that course
                     // TODO: tune this distance?
-                    if (turf_distance(pos, latlon) < 1000) {
+                    if (turfDistance(pos, latlon) < 1000) {
                         loadCourse(course_name, latlon)
                         return // TODO: break?
                     }

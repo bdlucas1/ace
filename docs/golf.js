@@ -614,8 +614,14 @@ async function queryCourseFeatures(latlon, distance=5000) {
     return features;
 }
 
-// TODO: need better strategy: cover visible map area with 0.1 deg tiles
-// instead of having a large
+function shorten(name) {
+    var words = name.split(" ")
+    words = words.filter(word => /^[A-Z]/.test(word))
+    words = words.filter(word => !["Golf", "Course", "Club", "Country", "Center"].includes(word))
+    const short_name = words.map(word => word.slice(0, 1)).join("")
+    return short_name
+}
+
 async function queryCourses(south, west, north, east) {
     const q = `way[leisure=golf_course](${south},${west},${north},${east});`
     const courses = await query(q)
@@ -623,6 +629,8 @@ async function queryCourses(south, west, north, east) {
     for (const course of courses.features) {
         const center = turf.centroid(course)
         const [lon, lat] = center.geometry.coordinates
+        if (course.properties.name)
+            course.properties.short_name = shorten(course.properties.name)
         result[course.properties.name] = [lat, lon]
     }
     return result
@@ -728,7 +736,15 @@ function manageCourses()  {
                         loadCourse(courseName, latlon)
                         return // TODO: break?
                     }
-                    const marker = L.marker(latlon).addTo(theMap).on("click", () => {
+                    var shortName = shorten(courseName)
+                    if (shortName.length > 2)
+                        shortName = shortName.slice(0, 2) + "<br/>" + shortName.slice(2)
+                    const icon = L.divIcon({
+                        html: `<div class="course-icon"><div>${shortName}</div></div>`,
+                        iconSize: [0, 0],
+                        iconAnchor: [0, 0],
+                    })
+                    const marker = L.marker(latlon, {icon}).addTo(theMap).on("click", () => {
                         courseMarkers.remove()
                         loadCourse(courseName, latlon)
                     }).addTo(courseMarkers)

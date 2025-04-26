@@ -166,16 +166,16 @@ function loadMap(elt, layerControl = true, locateControl = false) {
     // no key, so no limit?
     function ESRI() {
         const url = "https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        return L.tileLayer(url, {maxZoom: 20})
+        return L.tileLayer(url, {maxZoom: 19.75}) // TODO: 20 minus zoomSnap
     }
 
     // these will be presented in the layer switch control
     const baseMaps = [
         OSM(),
-        mapBox("mapbox/satellite-streets-v12"),
+        ESRI(),
 
         /*
-        ESRI(),
+        mapBox("mapbox/satellite-streets-v12"),
         mapTiler(),
         */
 
@@ -192,7 +192,7 @@ function loadMap(elt, layerControl = true, locateControl = false) {
     // create the map
     theMap = L.map(elt, {
         rotate: true,
-        zoomSnap: 0.2,
+        zoomSnap: 0.25,
         zoomControl: false,
         rotateControl: false,
     }).setZoom(selectCourseZoom)

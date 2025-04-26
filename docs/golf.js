@@ -481,7 +481,7 @@ async function updateLine() {
         useMarkers[i].bindTooltip(tip, {
             permanent: true,
             direction: "right",
-            offset: L.point([20, 0]),
+            offset: L.point([15, 0]),
             className: "distance-info"
         })
     }

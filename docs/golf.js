@@ -209,6 +209,72 @@ function loadMap(elt, layerControl = true, locateControl = false) {
 }
 
 
+////////////////////////////////////////////////////////////
+//
+// elevation data
+//
+
+const elevationTileCache =  new Map()
+
+async function getMarkerElevation(marker) {
+    const ll = marker.getLatLng()
+    return getElevation(ll.lat, ll.lng)
+}
+
+
+async function getElevation(lat, lon) {
+
+    //https://www.reddit.com/r/gis/comments/lg3fqa/are_there_any_dem_tile_servers_out_there/
+    //const url = `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`
+    //const url = `http://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer/tile/${z}/${y}/${x}.lerc2`
+
+    // for mapbox
+    const tileSize = 256
+    const z = 15
+    
+    // compute fractional tile fx,fy and integer tile x,y
+    const d2r = Math.PI / 180
+    const sin = Math.sin(lat * d2r)
+    const z2 = Math.pow(2, z)
+    const fx = z2 * (lon / 360 + 0.5)
+    const fy = z2 * (0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI)
+    const [x, y] = [Math.floor(fx), Math.floor(fy)]
+    
+    // get tile data
+    const key = x + "," + y + "," + z
+    if (!elevationTileCache.has(key)) {
+
+        // fetch tile into an image element
+        print("fetching elevation tile", key)
+        const token =
+              "pk.eyJ1IjoiYmRsdWNhczEiLCJhIjoiY2t5cW52dmI1MGx0ZjJ1cGV5NnM1eWw5NyJ9" +
+              ".1ig0mdAnI6dBI5MtVf-JKA"
+        const url = `https://api.mapbox.com/v4/mapbox.terrain-rgb/${z}/${x}/${y}.pngraw?access_token=${token}`
+        const img = new Image()
+        img.crossOrigin = 'Anonymous' // Needed for pixel access
+        img.src = url
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+        })
+
+        // draw image in offscreen canvas
+        const canvas = document.createElement("canvas")
+        canvas.width = canvas.height = tileSize
+        const ctx = canvas.getContext("2d", {willReadFrequently: true})
+        ctx.drawImage(img, 0, 0)
+        elevationTileCache.set(key, ctx)
+    }
+    const ctx = elevationTileCache.get(key)
+        
+    // extract elevation data from canvas
+    const [px, py] = [Math.floor((fx - x) * tileSize), Math.floor((fy - y) * tileSize)]
+    const [r, g, b] = ctx.getImageData(px, py, 1, 1).data
+    const elevation = (r * 256 * 256 + g * 256 + b) * 0.1 - 10000
+    return elevation
+}
+
+////////////////////////////////////////////////////////////
 //
 //
 // settings menu
@@ -378,7 +444,7 @@ var pathLine
 
 // draw a line connecting markers and update distance info
 // only use the location marker if it's visible in the current viewport
-function updateLine() {
+async function updateLine() {
 
     // update the polyline
     const useMarkers = pathMarkers.filter(m => m!=locationMarker || theMap.getBounds().contains(m.getLatLng()))
@@ -390,7 +456,12 @@ function updateLine() {
         m.unbindTooltip()
     for (var i = 1; i < useMarkers.length; i++) {
         const distance = turf.distance(turf_point(useMarkers[i-1]), turf_point(useMarkers[i]), {units: "yards"})
-        const tip = Math.round(distance) + " yd"
+        const el1 = await getMarkerElevation(useMarkers[i-1])
+        const el2 = await getMarkerElevation(useMarkers[i])
+        const elChange = Math.round((el2 - el1) * 3.28084)
+        const elChangeString = elChange >= 0? "+" + elChange : String(elChange)
+        //const tip = Math.round(distance) + " yd"
+        const tip = `${Math.round(distance)} yd<br/>${elChangeString} ft`
         useMarkers[i].bindTooltip(tip, {
             permanent: true,
             direction: "right",
@@ -411,7 +482,7 @@ function resetPath() {
 // move the locationMarker, optionally centering it
 function moveLocationMarker(loc, center) {
     const latlon = [loc.coords.latitude, loc.coords.longitude]
-    print("moving location marker to", latlon, "centering", center, "accuracy", loc.coords.accuracy, "m")
+    //print("moving location marker to", latlon, "centering", center, "accuracy", loc.coords.accuracy, "m")
     locationMarker.setLatLng(latlon)
     accuracyMarker.setLatLng(latlon)
     accuracyMarker.setRadius(loc.coords.accuracy)
@@ -488,7 +559,7 @@ async function manageLocation() {
 
         // dragging marker updates line
         marker.on("drag", (e) => {
-            print("drag")
+            //print("drag")
             updateLine()
         })
     })
@@ -563,7 +634,7 @@ async function query_courses(south, west, north, east) {
 async function cache_json(key, fun) {
     var value = localStorage.getItem(key)
     if (value) {
-        print("using cached data for", key)
+        print("using cached Overpass data for", key)
         return JSON.parse(value);
     } else {
         print("querying Overpass for", key)

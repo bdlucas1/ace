@@ -451,24 +451,16 @@ async function updateLine() {
     pathLine.setLatLngs(lls)
     
     // update the distance info
-    for (const m of pathMarkers)
-        m.unbindTooltip()
     for (var i = 1; i < useMarkers.length; i++) {
         const [m1, m2] = [useMarkers[i-1], useMarkers[i]]
         const distanceYd = turf.distance(turf_point(m1), turf_point(m2), {units: "yards"})
         const elChangeFt = ((await getMarkerElevation(m2)) - (await getMarkerElevation(m1))) * 3.28084
         const playsLikeYd = distanceYd + elChangeFt / 3
-        const tip = `
+        m2.setTooltipContent(`
             ${Math.round(distanceYd)} yd <br/>
             ${elChangeFt >= 0? "+" + Math.round(elChangeFt) : Math.round(elChangeFt)} ft <br/>
             ${Math.round(playsLikeYd)} yd <br/>
-        `
-        m2.bindTooltip(tip, {
-            permanent: true,
-            direction: "right",
-            offset: L.point([15, 0]),
-            className: "distance-info"
-        })
+        `)
     }
 }
 
@@ -544,6 +536,11 @@ async function manageLocation() {
             draggable: true,
             autoPan: false,
             autoPanOnFocus: false, // https://github.com/Raruto/leaflet-rotate/issues/28
+        }).bindTooltip("", {
+            permanent: true,
+            direction: "right",
+            offset: L.point([15, 0]),
+            className: "distance-info"
         }).addTo(theMap)
         pathMarkers.push(marker)
 

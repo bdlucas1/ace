@@ -574,7 +574,7 @@ async function manageLocation() {
 //
 
 // for selecting courses
-var courseMarkers
+var courseMarkerLayer
 
 // do an Overpass query against OSM data
 async function query(query) {
@@ -687,7 +687,8 @@ async function loadCourse(name, latlon) {
                     minHoleNumber = holeNumber
                 }
             }
-            holeFeatures[minHoleNumber].push(feature) 
+            if (minHoleNumber)
+                holeFeatures[minHoleNumber].push(feature) 
         }
     }
 
@@ -703,11 +704,17 @@ function manageCourses()  {
     async function selectCourse() {
 
         // clean slate
-        if (courseMarkers)
-            courseMarkers.remove()
-        courseMarkers = L.layerGroup().addTo(theMap)
+        if (courseMarkerLayer)
+            courseMarkerLayer.remove()
+        courseMarkerLayer = L.layerGroup().addTo(theMap)
         resetPath()
         theMap.setBearing(0)
+        theMap.setZoom(selectCourseZoom)
+        if (theMap.getZoom() != selectCourseZoom) {
+            print("awaiting zoomend")
+            await new Promise((resolve, reject) => {theMap.on("zoomend", resolve)})
+            print("zoomend")
+        }
 
         // snap to tile boundaries
         const tileSize = 0.25 // needs to be power of 2
@@ -745,9 +752,9 @@ function manageCourses()  {
                         iconAnchor: [0, 0],
                     })
                     const marker = L.marker(latlon, {icon}).addTo(theMap).on("click", () => {
-                        courseMarkers.remove()
+                        courseMarkerLayer.remove()
                         loadCourse(courseName, latlon)
-                    }).addTo(courseMarkers)
+                    }).addTo(courseMarkerLayer)
                 }
             }
         }

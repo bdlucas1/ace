@@ -589,8 +589,8 @@ async function query(query) {
     const api = "https://overpass-api.de/api/interpreter"
     const response = await fetch(api, {method: "POST", body: fullQuery,})
     try {
-        const response_json = await response.json()
-        const geojson = osmtogeojson(response_json)
+        const responseJSON = await response.json()
+        const geojson = osmtogeojson(responseJSON)
         return geojson
     } catch(e) {
         print(response.text())
@@ -601,7 +601,7 @@ async function queryCourseFeatures(latlon, distance=5000) {
 
     const [lat, lon] = latlon
 
-    const features_query = `
+    const featuresQuery = `
         (
            way[golf="hole"](around:${distance},${lat},${lon});
            way[golf="tee"](around:${distance},${lat},${lon});
@@ -610,7 +610,7 @@ async function queryCourseFeatures(latlon, distance=5000) {
            way[golf="green"](around:${distance},${lat},${lon});
         );
     `
-    const features = await query(features_query)
+    const features = await query(featuresQuery)
     return features;
 }
 
@@ -702,11 +702,11 @@ function manageCourses()  {
         theMap.setBearing(0)
 
         // snap to tile boundaries
-        const tile_size = 0.25 // needs to be power of 2
-        const dn = x => Math.floor(x/tile_size)*tile_size
-        const up = x => Math.floor((x+tile_size)/tile_size)*tile_size
+        const tileSize = 0.25 // needs to be power of 2
+        const dn = x => Math.floor(x/tileSize)*tileSize
+        const up = x => Math.floor((x+tileSize)/tileSize)*tileSize
 
-        // compute bounding box snapped to tiles of size tile_size deg
+        // compute bounding box snapped to tiles of size tileSize deg
         const bounds = theMap.getBounds()
         const south = dn(bounds.getSouth())
         const west = dn(bounds.getWest())
@@ -715,22 +715,22 @@ function manageCourses()  {
 
         // iterate over tiles adding markers
         const pos = await getPos()
-        for (var s = south; s < north; s += tile_size) {
-            for (var w = west; w < east; w += tile_size) {
-                const n = s + tile_size
-                const e = w + tile_size
+        for (var s = south; s < north; s += tileSize) {
+            for (var w = west; w < east; w += tileSize) {
+                const n = s + tileSize
+                const e = w + tileSize
                 const key = s + "," + w + "," + n + "," + e
                 const courses = await cacheJSON(key, () => queryCourses(s, w, n, e))
-                for (const [course_name, latlon] of Object.entries(courses)) {
+                for (const [courseName, latlon] of Object.entries(courses)) {
                     // if we're near course abort and just load that course
                     // TODO: tune this distance?
                     if (turfDistance(pos, latlon) < 1000) {
-                        loadCourse(course_name, latlon)
+                        loadCourse(courseName, latlon)
                         return // TODO: break?
                     }
                     const marker = L.marker(latlon).addTo(theMap).on("click", () => {
                         courseMarkers.remove()
-                        loadCourse(course_name, latlon)
+                        loadCourse(courseName, latlon)
                     }).addTo(courseMarkers)
                 }
             }

@@ -3,7 +3,7 @@
 const holeZoom = 17
 const courseZoom = 15
 const selectCourseZoom = 11
-
+const maxZoom = 20
 
 ////////////////////////////////////////////////////////////
 //
@@ -114,28 +114,13 @@ var theMap
 
 function loadMap(elt, layerControl = true, locateControl = false) {
 
-    // Thunderforest maps
-    function thunderForest(type) {
-        const key = "86d5ed83e1914677ba41e815a4126f2f"
-        const url = `https://tile.thunderforest.com/landscape/{z}/{x}/{y}{r}.png?apikey=${key}`
-        const attribution = `
-            ©<a href='https://www.thunderforest.com' target='_blank'>Thunderforest</a> |
-            ©<a href='https://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap</a>
-        `
-        return L.tileLayer(url, {attribution})
-    }
-
-    // USGS top maps
-    function USGS(type, maxZoom=16) {
+    // USGS maps
+    // not high enough res
+    function USGS(type, maxNativeZoom=16) {
         const url = `https://basemap.nationalmap.gov/arcgis/rest/services/${type}/MapServer/tile/{z}/{y}/{x}`
         const attrURL = "https://basemap.nationalmap.gov/arcgis/rest/services"
         const attribution = `<a href='${attrURL}' target='_blank'>USGS</a>`
-        return L.tileLayer(url, {attribution, maxZoom})
-    }
-
-    function OSM() {
-        const url = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-        return L.tileLayer(url, {maxZoom: 20})
+        return L.tileLayer(url, {attribution, maxZoom, maxNativeZoom})
     }
 
     // seems to cache for 12h
@@ -150,7 +135,7 @@ function loadMap(elt, layerControl = true, locateControl = false) {
             ©<a href='https://www.mapbox.com' target='_blank'>MapBox</a> |
             ©<a href='https://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap</a>
         `
-        return L.tileLayer(url, {attribution, style, token, maxZoom: 20})
+        return L.tileLayer(url, {attribution, style, token, maxZoom})
     }
 
     // seems to cache for 4h
@@ -159,14 +144,20 @@ function loadMap(elt, layerControl = true, locateControl = false) {
     // can limit by domain (?)
     function mapTiler() {
         const url = "https://api.maptiler.com/maps/satellite/{z}/{x}/{y}{r}.jpg?key=J95t1VSvDVTrfdsKsqyV"
-        return L.tileLayer(url, {maxZoom: 20})
+        return L.tileLayer(url, {maxZoom})
+    }
+
+    // no key, no limit?
+    function OSM() {
+        const url = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        return L.tileLayer(url, {maxZoom, maxNativeZoom: 19})
     }
 
     // seems to cache for 24h
-    // no key, so no limit?
+    // no key, no limit?
     function ESRI() {
         const url = "https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        return L.tileLayer(url, {maxZoom: 19.75}) // TODO: 20 minus zoomSnap
+        return L.tileLayer(url, {maxZoom, maxNativeZoom: 19})
     }
 
     // these will be presented in the layer switch control
@@ -174,19 +165,9 @@ function loadMap(elt, layerControl = true, locateControl = false) {
         OSM(),
         ESRI(),
 
-        /*
-        mapBox("mapbox/satellite-streets-v12"),
-        mapTiler(),
-        */
-
-        /*
-        "Thunderforest landscape": thunderForest("landscape"),
-        "MapBox outdoors": mapBox("mapbox/outdoors-v12"),
-        "MapBox custom": mapBox("bdlucas1/ckyqokvgx03so14kg7zgkvfsd"),
-        "USGS topo": USGS("USGSTopo"),
-        "USGS imagery": USGS("USGSImageryOnly"),
-        "USGS imagery topo": USGS("USGSImageryTopo"),
-        */
+        //mapBox("mapbox/satellite-streets-v12"),
+        //mapTiler(),
+        //USGS("USGSImageryOnly"),
     ]
 
     // create the map
@@ -196,6 +177,7 @@ function loadMap(elt, layerControl = true, locateControl = false) {
         zoomControl: false,
         rotateControl: false,
     }).setZoom(selectCourseZoom)
+    //theMap.on("zoomend", () => print("zoom", theMap.getZoom()))
 
     // our own layer switcher
     var currentLayerNumber = 0

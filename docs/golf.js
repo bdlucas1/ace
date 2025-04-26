@@ -216,63 +216,79 @@ function loadMap(elt, layerControl = true, locateControl = false) {
 
 const elevationTileCache =  new Map()
 
-async function getMarkerElevation(marker) {
-    const ll = marker.getLatLng()
-    return getElevation(ll.lat, ll.lng)
-}
+async function getEl(lat, lon, el) {
 
-
-async function getElevation(lat, lon) {
-
-    //https://www.reddit.com/r/gis/comments/lg3fqa/are_there_any_dem_tile_servers_out_there/
-    //const url = `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`
-    //const url = `http://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer/tile/${z}/${y}/${x}.lerc2`
-
-    // for mapbox
-    const tileSize = 256
-    const z = 15
-    
     // compute fractional tile fx,fy and integer tile x,y
     const d2r = Math.PI / 180
     const sin = Math.sin(lat * d2r)
-    const z2 = Math.pow(2, z)
+    const z2 = Math.pow(2, el.z)
     const fx = z2 * (lon / 360 + 0.5)
     const fy = z2 * (0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI)
     const [x, y] = [Math.floor(fx), Math.floor(fy)]
     
     // get tile data
-    const key = x + "," + y + "," + z
+    const key = x + "," + y + "," + el.z
     if (!elevationTileCache.has(key)) {
 
         // fetch tile into an image element
         print("fetching elevation tile", key)
-        const token =
-              "pk.eyJ1IjoiYmRsdWNhczEiLCJhIjoiY2t5cW52dmI1MGx0ZjJ1cGV5NnM1eWw5NyJ9" +
-              ".1ig0mdAnI6dBI5MtVf-JKA"
-        const url = `https://api.mapbox.com/v4/mapbox.terrain-rgb/${z}/${x}/${y}.pngraw?access_token=${token}`
         const img = new Image()
         img.crossOrigin = 'Anonymous' // Needed for pixel access
-        img.src = url
+        img.src = el.xyz2url(x, y, el.z)
         await new Promise((resolve, reject) => {
             img.onload = resolve;
             img.onerror = reject;
         })
+        if (img.width != el.tileSize)
+            throw `img.width ${img.width} does not match tileSize ${el.tileSize}`
 
         // draw image in offscreen canvas
         const canvas = document.createElement("canvas")
-        canvas.width = canvas.height = tileSize
+        canvas.width = canvas.height = el.tileSize
         const ctx = canvas.getContext("2d", {willReadFrequently: true})
         ctx.drawImage(img, 0, 0)
         elevationTileCache.set(key, ctx)
     }
     const ctx = elevationTileCache.get(key)
-        
+    
     // extract elevation data from canvas
-    const [px, py] = [Math.floor((fx - x) * tileSize), Math.floor((fy - y) * tileSize)]
+    const [px, py] = [Math.floor((fx - x) * el.tileSize), Math.floor((fy - y) * el.tileSize)]
     const [r, g, b] = ctx.getImageData(px, py, 1, 1).data
-    const elevation = (r * 256 * 256 + g * 256 + b) * 0.1 - 10000
+    const elevation = el.rgb2el(r, g, b)
     return elevation
 }
+
+// https://www.reddit.com/r/gis/comments/lg3fqa/are_there_any_dem_tile_servers_out_there/
+// uses my api key, could get billed
+const mapboxEl = {
+    xyz2url: (x, y, z) => {
+        const token =
+              "pk.eyJ1IjoiYmRsdWNhczEiLCJhIjoiY2t5cW52dmI1MGx0ZjJ1cGV5NnM1eWw5NyJ9" +
+              ".1ig0mdAnI6dBI5MtVf-JKA"
+        return `https://api.mapbox.com/v4/mapbox.terrain-rgb/${z}/${x}/${y}.pngraw?access_token=${token}`
+    },
+    rgb2el: (r, g, b) => (r * 256 * 256 + g * 256 + b) * 0.1 - 10000,
+    tileSize: 256,
+    z: 15
+}
+
+// https://github.com/tilezen/joerd/blob/master/docs/formats.md
+// https://aws.amazon.com/blogs/publicsector/announcing-terrain-tiles-on-aws-a-qa-with-mapzen/
+const mapzenEl = {
+    xyz2url: (x, y, z) => `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`,
+    rgb2el: (r, g, b) => (r * 256 + g + b / 256) - 32768,
+    tileSize: 256,
+    z: 15
+}
+
+//const getElevation = (lat, lon) => getEl(lat, lon, mapboxEl)
+const getElevation = (lat, lon) => getEl(lat, lon, mapzenEl)
+
+async function getMarkerElevation(marker) {
+    const ll = marker.getLatLng()
+    return getElevation(ll.lat, ll.lng)
+}
+
 
 ////////////////////////////////////////////////////////////
 //

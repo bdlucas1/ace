@@ -470,6 +470,9 @@ async function updateLine() {
             className: "distance-info"
         })
     }
+
+    // make sure we're in front of course features
+    pathLine.bringToFront()
 }
 
 function resetPath() {

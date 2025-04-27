@@ -118,7 +118,8 @@ html, body {
         overflow: visible;
     }
 
-    --path-color: #006fff;
+    --path-color: #318bff;
+
     .path-line {
         stroke: var(--path-color);
     }

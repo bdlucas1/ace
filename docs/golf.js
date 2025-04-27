@@ -715,7 +715,7 @@ async function loadCourse(name, latlon) {
 function manageCourses()  {
 
     // put up markers to select courses centered around current location
-    async function selectCourse() {
+    async function selectCourse(autoSelect) {
 
         // clean slate
         if (courseMarkerLayer)
@@ -753,7 +753,7 @@ function manageCourses()  {
                 for (const [courseName, latlon] of Object.entries(courses)) {
                     // if we're near course abort and just load that course
                     // TODO: tune this distance?
-                    if (turfDistance(pos, latlon) < 1000) {
+                    if (autoSelect && turfDistance(pos, latlon) < 1000) {
                         loadCourse(courseName, latlon)
                         return // TODO: break?
                     }
@@ -784,10 +784,10 @@ function manageCourses()  {
 
     const selectCourseButton = document.querySelector("#select-course")
     selectCourseButton.innerHTML = "<img src='golfer.png'></img>"
-    selectCourseButton.addEventListener("click", selectCourse)
+    selectCourseButton.addEventListener("click", () => selectCourse(false))
 
     // this is our initial action
-    selectCourse()
+    selectCourse(true)
 }
 
 

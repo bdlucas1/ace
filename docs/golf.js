@@ -93,6 +93,12 @@ function svgIcon(innerSvg, className) {
     return icon
 }
 
+// NOTE: cannot use img for this because can't style in css
+// could use svg with use, but that is fussy, requires two viewboxes, etc.
+// this is cleanest so far
+// the upper left corner of the svg is the reference point,
+// so design the svg accordingly and allow to overflow viewBox if necessary
+// then style in css to size the whole viewBox
 async function svgUrlIcon(url, className) {
     const response = await fetch(url)
     const html = await response.text()
@@ -539,6 +545,7 @@ async function manageLocation() {
     locateButton.addEventListener("click", goToCurrentLocation)
 
     // clicking on map adds a marker
+    // TODO: use svgUrlIcon, and design it so that viewBox is the grab area
     const markerIcon = svgIcon("<circle>", "path-marker")
     theMap.on("click", function(e) {
 

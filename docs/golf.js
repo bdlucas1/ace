@@ -77,6 +77,7 @@ function turfDistance(a, b) {
     return turf.distance(turfPoint(a), turfPoint(b), {units: "meters"})
 }
 
+// TODO: redo marker icon to use svgUrlIcon and get rid of this
 function svgIcon(innerSvg, className) {
     const icon = L.divIcon({
         html: `
@@ -532,6 +533,7 @@ async function manageLocation() {
     }
 
     // locate button moves map to current location
+    // TODO: redo using svg for consistency with map location icon (?)
     const locateButton = document.querySelector("#locate")
     locateButton.innerHTML = "<img src='crosshair.png'></img>"
     locateButton.addEventListener("click", goToCurrentLocation)

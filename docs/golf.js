@@ -546,6 +546,7 @@ async function manageLocation() {
 
     // clicking on map adds a marker
     // TODO: use svgUrlIcon, and design it so that viewBox is the grab area
+    // or use a containing div for grab area?
     const markerIcon = svgIcon("<circle>", "path-marker")
     theMap.on("click", function(e) {
 

@@ -296,13 +296,13 @@ async function manageSettings() {
         itemElt.classList.add("settings-button")
         settingsElt.insertBefore(itemElt, document.querySelector("#console"))
         itemElt.addEventListener("click", action)
+        // closing is handled by event propagationg to settingsElt
     }
 
     // clear course data button
     addSetting("Clear course data", () => {
         print("clearing local storage")
         localStorage.clear()
-        toggleSettings()
     })
 
     // manage settings menu display
@@ -316,6 +316,7 @@ async function manageSettings() {
     // set up show-settings button
     const settingsButton = document.querySelector("#show-settings")
     settingsButton.addEventListener("click", toggleSettings)
+    settingsElt.addEventListener("click", toggleSettings)
 }
 
 

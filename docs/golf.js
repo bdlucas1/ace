@@ -77,18 +77,6 @@ function turfDistance(a, b) {
     return turf.distance(turfPoint(a), turfPoint(b), {units: "meters"})
 }
 
-function defineIcon(width, height, url) {
-    return L.Icon.extend({
-        options: {
-            iconSize: [width, height],
-            iconAnchor: [width/2, height/2],
-            iconUrl: url,
-        }
-    })
-}
-
-const CrosshairIcon = defineIcon(30, 30, "crosshair.png")
-
 function svgIcon(innerSvg, className) {
     const icon = L.divIcon({
         html: `
@@ -100,6 +88,18 @@ function svgIcon(innerSvg, className) {
         iconAnchor: [0, 0],
         //style: {overflow: visible},
         className: "svg-icon",
+    })
+    return icon
+}
+
+async function svgUrlIcon(url, className) {
+    const response = await fetch(url)
+    const html = await response.text()
+    const icon = L.divIcon({
+        html,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+        className: `svg-icon ${className}`,
     })
     return icon
 }
@@ -507,7 +507,8 @@ async function goToCurrentLocation() {
 async function manageLocation() {
     
     // set up location and accuracy marker, and polyline
-    locationMarker = L.marker([0,0], {icon: new CrosshairIcon()}).addTo(theMap)
+    const icon = await svgUrlIcon("crosshair.svg", "crosshair")
+    locationMarker = L.marker([0,0], {icon}).addTo(theMap)
     accuracyMarker = L.circleMarker([0,0], {
         radius: 100,
         color: "blue", opacity: 0.3,

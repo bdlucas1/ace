@@ -123,6 +123,13 @@ html, body {
         stroke: var(--path-color);
     }
 
+    .crosshair svg {
+        width: 20px;
+        height: 20px;
+        stroke: var(--path-color);
+        stroke-width: 3px;
+    }
+
     svg.path-marker {
 
         /* svg is bigger than circle so it's easier to grab */

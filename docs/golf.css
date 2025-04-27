@@ -131,6 +131,12 @@ html, body {
         stroke-width: 3px;
     }
 
+    .accuracy {
+        stroke: var(--path-color);
+        stroke-opacity: 0.2;
+        fill: var(--path-color);
+    }
+
     svg.path-marker {
 
         /* svg is bigger than circle so it's easier to grab */

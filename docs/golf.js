@@ -520,11 +520,7 @@ async function manageLocation() {
     // set up location and accuracy marker, and polyline
     const icon = await svgUrlIcon("crosshair.svg", "crosshair")
     locationMarker = L.marker([0,0], {icon}).addTo(theMap)
-    accuracyMarker = L.circleMarker([0,0], {
-        radius: 100,
-        color: "blue", opacity: 0.3,
-        fillColor: "blue", fillOpacity: 0.1,
-    }).addTo(theMap)
+    accuracyMarker = L.circle([0,0], {className: "accuracy"}).addTo(theMap)
     pathLine = L.polyline([], {className: "path-line"}).addTo(theMap)
     
     // watch for position changes, and update locationMarker accordingly
@@ -848,7 +844,7 @@ const url = new URL(document.baseURI)
 if (url.searchParams.has("testLoc")) {
     // testLoc sets lastLoc which disables watchPosition
     const [lat, lon] = url.searchParams.get("testLoc").split(",")
-    lastLoc = {coords: {latitude: Number(lat), longitude: Number(lon), accuracy: 10}} 
+    lastLoc = {coords: {latitude: Number(lat), longitude: Number(lon), accuracy: 100}} 
     print(lastLoc)
 }
 

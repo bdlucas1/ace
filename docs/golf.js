@@ -327,7 +327,7 @@ async function manageSettings() {
 
 var selectedHole
 var selectedHoleLayer
-var holeFeatures
+var holeFeatures = []
 
 async function selectHole(holeNumber) {
 
@@ -497,7 +497,7 @@ function moveLocationMarker(loc, center) {
     //print("moving location marker to", latlon, "centering", center, "accuracy", loc.coords.accuracy, "m")
     locationMarker.setLatLng(latlon)
     accuracyMarker.setLatLng(latlon)
-    accuracyMarker.setRadius(loc.coords.accuracy)
+    accuracyMarker.setRadius(loc.coords.accuracy) // units provided and units expected are both meters
     if (center)
         theMap.setView(latlon)
     lastLoc = loc
@@ -718,6 +718,7 @@ function manageCourses()  {
         if (courseMarkerLayer)
             courseMarkerLayer.remove()
         courseMarkerLayer = L.layerGroup().addTo(theMap)
+        holeFeatures = []
         resetPath()
         theMap.setBearing(0)
         theMap.setZoom(selectCourseZoom)
@@ -844,7 +845,7 @@ const url = new URL(document.baseURI)
 if (url.searchParams.has("testLoc")) {
     // testLoc sets lastLoc which disables watchPosition
     const [lat, lon] = url.searchParams.get("testLoc").split(",")
-    lastLoc = {coords: {latitude: Number(lat), longitude: Number(lon), accuracy: 100}} 
+    lastLoc = {coords: {latitude: Number(lat), longitude: Number(lon), accuracy: 100}} // meters
     print(lastLoc)
 }
 

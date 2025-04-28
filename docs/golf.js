@@ -294,7 +294,7 @@ async function manageSettings() {
         const itemElt = document.createElement("div")
         itemElt.innerText = text
         itemElt.classList.add("settings-button")
-        settingsElt.insertBefore(itemElt, document.querySelector("#console"))
+        settingsElt.insertBefore(itemElt, document.querySelector("#status"))
         itemElt.addEventListener("click", action)
         // closing is handled by event propagationg to settingsElt
     }
@@ -506,14 +506,14 @@ async function moveLocationMarker(pos, center) {
     // report elevation
     const demEl = await getElevation(...latlon)
     const gpsEl = pos.coords.altitude
-    const gpsElAcc = 3.772 //pos.coords.altitudeAccuracy
+    const gpsElAcc = pos.coords.altitudeAccuracy
     const delta = (gpsEl - demEl) * 3.28084
     print("xxx", pos)
-    print(`
-        dem: ${demEl.toFixed(1)} m;
-        gps: ${gpsEl.toFixed(1)}±${gpsElAcc.toFixed(1)} m;
+    const msg = `
+        dem: ${demEl.toFixed(1)} m &emsp; | &emsp;
+        gps: ${gpsEl.toFixed(1)}±${gpsElAcc.toFixed(1)} m &emsp; | &emsp;
         delta: ${delta.toFixed(1)} ft
-    `)
+    document.querySelector("#status").innerHTML = msg
 }
 
 // center the current location in the map and reset markers
@@ -819,6 +819,7 @@ async function show() {
           <div class="main-button" id="show-settings"></div>
           <div id="map"></div>
           <div id="settings">
+              <div id="status"></div>
               <div id="console"></div>
           </div>
           <div id="score-row">
@@ -857,7 +858,11 @@ const url = new URL(document.baseURI)
 if (url.searchParams.has("testPos")) {
     // testLoc sets lastPos which disables watchPosition
     const [lat, lon] = url.searchParams.get("testPos").split(",")
-    lastPos = {coords: {latitude: Number(lat), longitude: Number(lon), accuracy: 100}} // meters
+    lastPos = {coords: {
+        // meters
+        latitude: Number(lat), longitude: Number(lon), accuracy: 100,
+        altitude: 123.456, altitudeAccuracy: 34.56
+    }}
     print(lastPos)
 }
 

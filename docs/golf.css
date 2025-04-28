@@ -1,3 +1,4 @@
+
 html, body {
     width: 100vw;
     max-width: 500px;
@@ -216,15 +217,12 @@ html, body {
         font-size: 18px;
     }
 
-    #console {
+    #console, #status {
 
         font-family: sans-serif;
         font-size: 12px;
         padding: 0.5em;
         justify-self: flex-end;
-        margin-top: auto;
-        height: 50%;
-        max-height: 50vh;
         overflow: scroll;
 
         > * {
@@ -232,8 +230,21 @@ html, body {
             text-indent: -1em;
         }
 
+    }
+
+    #status {
+        margin-top: auto;
+    }
+
+    #console {
+
+        height: 50%;
+        max-height: 50vh;
+
         .console-error {
             background: #702000;
         }
     }
+
+
 }

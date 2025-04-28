@@ -236,6 +236,10 @@ html, body {
         margin-top: auto;
     }
 
+    #status:empty {
+        visibility: hidden;
+    }
+
     #console {
 
         height: 50%;
@@ -245,6 +249,4 @@ html, body {
             background: #702000;
         }
     }
-
-
 }

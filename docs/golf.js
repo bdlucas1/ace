@@ -493,8 +493,10 @@ function resetPath() {
 
 // move the locationMarker, optionally centering it
 async function moveLocationMarker(pos, center) {
+
+    // update location and accuracy marker, and optionally center view if requested
+    // also remember this position as lastPos, and update the path
     const latlon = [pos.coords.latitude, pos.coords.longitude]
-    //print("moving location marker to", latlon, "centering", center, "accuracy", pos.coords.accuracy, "m")
     locationMarker.setLatLng(latlon)
     accuracyMarker.setLatLng(latlon)
     accuracyMarker.setRadius(pos.coords.accuracy) // units provided and units expected are both meters
@@ -503,18 +505,19 @@ async function moveLocationMarker(pos, center) {
     lastPos = pos
     updateLine()
 
-    // report elevation
+    // report DEM and GPS elevation for investigation
     const demEl = await getElevation(...latlon)
     const gpsEl = pos.coords.altitude
     const gpsElAcc = pos.coords.altitudeAccuracy
-    const delta = (gpsEl - demEl) * 3.28084
-    print("xxx", pos)
-    const msg = `
-        dem: ${demEl.toFixed(1)} m &emsp; | &emsp;
-        gps: ${gpsEl.toFixed(1)}±${gpsElAcc.toFixed(1)} m &emsp; | &emsp;
-        delta: ${delta.toFixed(1)} ft
-    `
-    document.querySelector("#status").innerHTML = msg
+    if (gpsEl && gpsElAcc) {
+        const delta = (gpsEl - demEl) * 3.28084
+        const msg = `
+            dem: ${demEl.toFixed(1)} m &emsp; | &emsp;
+            gps: ${gpsEl.toFixed(1)}±${gpsElAcc.toFixed(1)} m &emsp; | &emsp;
+            delta: ${delta.toFixed(1)} ft
+        `
+        document.querySelector("#status").innerHTML = msg
+    }
 }
 
 // center the current location in the map and reset markers

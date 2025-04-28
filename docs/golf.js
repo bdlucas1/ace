@@ -513,6 +513,7 @@ async function moveLocationMarker(pos, center) {
         dem: ${demEl.toFixed(1)} m &emsp; | &emsp;
         gps: ${gpsEl.toFixed(1)}±${gpsElAcc.toFixed(1)} m &emsp; | &emsp;
         delta: ${delta.toFixed(1)} ft
+    `
     document.querySelector("#status").innerHTML = msg
 }
 

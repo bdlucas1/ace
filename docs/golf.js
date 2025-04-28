@@ -40,11 +40,11 @@ const print = console.log
 const printj = (j) => print(JSON.stringify(j, null, 2))
 
 // return current pos
-var lastLoc
+var lastPos
 async function getPos() {
-    if (lastLoc) {
+    if (lastPos) {
         // use last reported by watchPosition
-        return lastLoc;
+        return lastPos;
     } else {
         // otherwise ask
         const pos = await new Promise((resolve, reject) => {
@@ -492,24 +492,36 @@ function resetPath() {
 }
 
 // move the locationMarker, optionally centering it
-function moveLocationMarker(loc, center) {
-    const latlon = [loc.coords.latitude, loc.coords.longitude]
-    //print("moving location marker to", latlon, "centering", center, "accuracy", loc.coords.accuracy, "m")
+async function moveLocationMarker(pos, center) {
+    const latlon = [pos.coords.latitude, pos.coords.longitude]
+    //print("moving location marker to", latlon, "centering", center, "accuracy", pos.coords.accuracy, "m")
     locationMarker.setLatLng(latlon)
     accuracyMarker.setLatLng(latlon)
-    accuracyMarker.setRadius(loc.coords.accuracy) // units provided and units expected are both meters
+    accuracyMarker.setRadius(pos.coords.accuracy) // units provided and units expected are both meters
     if (center)
         theMap.setView(latlon)
-    lastLoc = loc
+    lastPos = pos
     updateLine()
+
+    // report elevation
+    const demEl = await getElevation(...latlon)
+    const gpsEl = pos.coords.altitude
+    const gpsElAcc = 3.772 //pos.coords.altitudeAccuracy
+    const delta = (gpsEl - demEl) * 3.28084
+    print("xxx", pos)
+    print(`
+        dem: ${demEl.toFixed(1)} m;
+        gps: ${gpsEl.toFixed(1)}±${gpsElAcc.toFixed(1)} m;
+        delta: ${delta.toFixed(1)} ft
+    `)
 }
 
 // center the current location in the map and reset markers
 async function goToCurrentLocation() {
     
     // center on current position
-    const loc = await getPos()
-    moveLocationMarker(loc, true)
+    const pos = await getPos()
+    moveLocationMarker(pos, true)
     
     // remove other markers
     resetPath()
@@ -525,11 +537,11 @@ async function manageLocation() {
     
     // watch for position changes, and update locationMarker accordingly
     // this does not center the locationMarker
-    // if lastLoc is already set then it will be a test position so we don't
+    // if lastPos is already set then it will be a test position so we don't
     // watch actual position
-    if (!lastLoc) {
+    if (!lastPos) {
         navigator.geolocation.watchPosition(
-            (loc) => moveLocationMarker(loc, false),
+            (pos) => moveLocationMarker(pos, false),
             print,
             {enableHighAccuracy: true}
         )
@@ -842,11 +854,11 @@ async function show() {
 
 // parse parameters
 const url = new URL(document.baseURI)
-if (url.searchParams.has("testLoc")) {
-    // testLoc sets lastLoc which disables watchPosition
-    const [lat, lon] = url.searchParams.get("testLoc").split(",")
-    lastLoc = {coords: {latitude: Number(lat), longitude: Number(lon), accuracy: 100}} // meters
-    print(lastLoc)
+if (url.searchParams.has("testPos")) {
+    // testLoc sets lastPos which disables watchPosition
+    const [lat, lon] = url.searchParams.get("testPos").split(",")
+    lastPos = {coords: {latitude: Number(lat), longitude: Number(lon), accuracy: 100}} // meters
+    print(lastPos)
 }
 
 show()

@@ -271,6 +271,33 @@ async function getImgEl(fx, fy, el) {
     return elevation
 }
 
+async function getLercEl(fx, fy, el) {
+
+    // load decoder
+    await Lerc.load()
+
+    // get tile data
+    const [x, y] = [Math.floor(fx), Math.floor(fy)]
+    const key = x + "," + y + "," + el.z
+    if (!elevationTileCache.has(key)) {
+        print("fetching elevation tile", key)
+        const url = el.xyz2url(x, y, el.z)
+        const response = await fetch(url)
+        const buffer = await response.arrayBuffer()
+        const data = Lerc.decode(buffer)
+        elevationTileCache.set(key, data)
+    }
+    const data = elevationTileCache.get(key)
+    
+    // extract elevation data
+    // note use of round instead of floor because of extra row/col of pixels
+    // TODO: off by one or one-half?
+    const tileSize = data.width - 1 // ESRI elevation tiles have an extra row/col
+    const [px, py] = [Math.round((fx - x) * tileSize), Math.round((fy - y) * tileSize)]
+    const offset = py * data.width + px
+    return data.pixels[0][offset]
+}
+
 // https://www.reddit.com/r/gis/comments/lg3fqa/are_there_any_dem_tile_servers_out_there/
 // uses my api key, could get billed
 const mapboxEl = {
@@ -296,14 +323,21 @@ const mapzenEl = {
     z: 15
 }
 
+// https://developers.arcgis.com/documentation/tiled-elevation-service/
+// https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer
+// https://app.unpkg.com/lerc@4.0.4/files/README.md
 const esriEl = {
-    xyz2url: (x, y, z) => "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/" +
-        `Terrain3D/ImageServer/tile/{$z}/{$x}/{$y}`
+    xyz2url: (x, y, z) =>
+        "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D" +
+        `/ImageServer/tile/${z}/${y}/${x}`,
+    getEl: getLercEl,
+    z: 16
 }
     
 
 //const getElevation = (lat, lon) => getEl(lat, lon, mapboxEl)
-const getElevation = (lat, lon) => getEl(lat, lon, mapzenEl)
+//const getElevation = (lat, lon) => getEl(lat, lon, mapzenEl)
+const getElevation = (lat, lon) => getEl(lat, lon, esriEl)
 
 async function getMarkerElevation(marker) {
     const ll = marker.getLatLng()

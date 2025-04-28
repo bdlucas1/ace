@@ -168,10 +168,29 @@ function loadMap(elt, layerControl = true, locateControl = false) {
         return L.tileLayer(url, {maxZoom, maxNativeZoom: 19})
     }
 
+    function DEM1() {
+        const url = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
+        return L.tileLayer(url, {maxZoom, maxNativeZoom: 15})
+    }
+
+    function DEM2() {
+        const token =
+              "pk.eyJ1IjoiYmRsdWNhczEiLCJhIjoiY2t5cW52dmI1MGx0ZjJ1cGV5NnM1eWw5NyJ9" +
+              ".1ig0mdAnI6dBI5MtVf-JKA"
+        const url =  `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token=${token}`
+        return L.tileLayer(url, {maxZoom, maxNativeZoom: 16})
+    }
+
+
     // these will be presented in the layer switch control
     const baseMaps = [
+
         OSM(),
         ESRI(),
+
+        // elevation tiles as images
+        //DEM1()
+        //DEM2()
 
         //mapBox("mapbox/satellite-streets-v12"),
         //mapTiler(),
@@ -214,9 +233,13 @@ async function getEl(lat, lon, el) {
     const z2 = Math.pow(2, el.z)
     const fx = z2 * (lon / 360 + 0.5)
     const fy = z2 * (0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI)
-    const [x, y] = [Math.floor(fx), Math.floor(fy)]
+    return el.getEl(fx, fy, el)
+}
     
+async function getImgEl(fx, fy, el) {
+
     // get tile data
+    const [x, y] = [Math.floor(fx), Math.floor(fy)]
     const key = x + "," + y + "," + el.z
     if (!elevationTileCache.has(key)) {
 
@@ -257,6 +280,7 @@ const mapboxEl = {
               ".1ig0mdAnI6dBI5MtVf-JKA"
         return `https://api.mapbox.com/v4/mapbox.terrain-rgb/${z}/${x}/${y}.pngraw?access_token=${token}`
     },
+    getEl: getImgEl,
     rgb2el: (r, g, b) => (r * 256 * 256 + g * 256 + b) * 0.1 - 10000,
     tileSize: 256,
     z: 15
@@ -266,10 +290,17 @@ const mapboxEl = {
 // https://aws.amazon.com/blogs/publicsector/announcing-terrain-tiles-on-aws-a-qa-with-mapzen/
 const mapzenEl = {
     xyz2url: (x, y, z) => `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`,
+    getEl: getImgEl,
     rgb2el: (r, g, b) => (r * 256 + g + b / 256) - 32768,
     tileSize: 256,
     z: 15
 }
+
+const esriEl = {
+    xyz2url: (x, y, z) => "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/" +
+        `Terrain3D/ImageServer/tile/{$z}/{$x}/{$y}`
+}
+    
 
 //const getElevation = (lat, lon) => getEl(lat, lon, mapboxEl)
 const getElevation = (lat, lon) => getEl(lat, lon, mapzenEl)

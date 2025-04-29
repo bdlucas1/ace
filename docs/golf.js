@@ -693,10 +693,13 @@ async function query(query) {
     }
 }
 
-async function queryCourseFeatures(latlon, distance=5000) {
+async function queryCourseFeatures(name, latlon) {
 
     const [lat, lon] = latlon
 
+    // query language doesn't support querying for features within a polygon
+    // so instead query for all features within a certain distance, then filter
+    const distance = 5000
     const featuresQuery = `
         (
            way[golf="hole"](around:${distance},${lat},${lon});
@@ -704,10 +707,48 @@ async function queryCourseFeatures(latlon, distance=5000) {
            way[golf="fairway"](around:${distance},${lat},${lon});
            way[golf="bunker"](around:${distance},${lat},${lon});
            way[golf="green"](around:${distance},${lat},${lon});
+           way[name='${name}'];
         );
     `
     const features = await query(featuresQuery)
-    return features;
+
+    // find the course bounds among the query results
+    // generally should be fast as it appears course bounds will be first
+    // I guess because it was last in the query?
+    var courseBounds
+    for (const feature of features.features) {
+        if (feature.properties.name == name) {
+            courseBounds = feature.geometry
+            break
+        }
+    }
+
+    // now filter the features we found within a certain radius of the course
+    // to include only those actually within the course bounds
+    // we do this filtering here so it gets cached
+    function onCourse(feature) {
+        if (feature.properties.leisure == "golf_course") {
+            // don't want the course bounds in this feature list
+            return false
+        } if (feature.geometry.type == "Polygon") {
+            // tee, bunker, fairway, green
+            for (const loop of feature.geometry.coordinates)
+                for (const point of loop)
+                    if (turf.booleanPointInPolygon(point, courseBounds))
+                        return true
+        } else if (feature.geometry.type == "LineString") {
+            // hole is defined by a linestring
+            for (const point of feature.geometry.coordinates)
+                if (turf.booleanPointInPolygon(point, courseBounds))
+                    return true
+        } else {
+            print("unknown feature geometry type", feature.geometry.type)
+        }
+        print("excluding", feature)
+        return false
+    }
+    const ownFeatures = features.features.filter(onCourse)
+    return ownFeatures;
 }
 
 function shorten(name) {
@@ -749,7 +790,7 @@ async function cacheJSON(key, fun) {
 async function loadCourse(name, latlon) {
 
     // get course data
-    const course = await cacheJSON(name, () => queryCourseFeatures(latlon))
+    const courseFeatures = await cacheJSON(name, () => queryCourseFeatures(name, latlon))
 
     // group features by nearest hole into holeFeatures array
     // holeFeatures is indexed by hole number,
@@ -761,7 +802,7 @@ async function loadCourse(name, latlon) {
 
     // first get the hole feature (line representing hole)
     holeFeatures = []
-    for (const feature of course.features) {
+    for (const feature of courseFeatures) {
         if (feature.properties.golf == "hole") {
             // other code depends on the "hole" feature being first in the features array
             const holeNumber = feature.properties.ref
@@ -770,7 +811,7 @@ async function loadCourse(name, latlon) {
     }
 
     // then for each non-hole feature associate it with the closest hole
-    for (const feature of course.features) {
+    for (const feature of courseFeatures) {
         if (feature.properties.golf != "hole") {
             const centroid = turf.centroid(feature)
             var minDistance = Infinity

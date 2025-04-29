@@ -326,6 +326,10 @@ const mapzenEl = {
 // https://developers.arcgis.com/documentation/tiled-elevation-service/
 // https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer
 // https://app.unpkg.com/lerc@4.0.4/files/README.md
+// at mazimum zoom level 16:
+//     about 600 m square, 2.4 m / pixel
+//     seem to generally be around 30-40k bytes
+//     max-age returned by server: 24h
 const esriEl = {
     xyz2url: (x, y, z) =>
         "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D" +

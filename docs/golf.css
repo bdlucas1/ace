@@ -192,6 +192,14 @@ html, body {
         &:before {display: none !important;} /* remove arrow */
     }
 
+    /* hack to avoid gaps between tiles at fractional scaling */
+    /* https://github.com/Leaflet/Leaflet/issues/3575 */
+    img.leaflet-tile {
+        mix-blend-mode: normal !important;  /* remove hack that seems to be built into leaflet */
+        width: 256.3px !important;          /* expand tiles slightly - this seems to be enough */
+        height: 256.3px !important;         /* but causes some very very slight artifacts at tile boundaries */
+    }
+
 }
 
 #settings {
@@ -250,3 +258,4 @@ html, body {
         }
     }
 }
+

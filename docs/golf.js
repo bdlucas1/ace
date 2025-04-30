@@ -581,6 +581,9 @@ async function moveLocationMarker(pos, center) {
     updateLine()
 
     // report DEM and GPS elevation for investigation
+    // GPS elevation not good enough to be useful
+    // but keep this code for future reference
+    /*
     const demEl = await getElevation(...latlon)
     const gpsEl = pos.coords.altitude
     const gpsElAcc = pos.coords.altitudeAccuracy
@@ -593,6 +596,7 @@ async function moveLocationMarker(pos, center) {
         `
         document.querySelector("#status").innerHTML = msg
     }
+    */
 }
 
 // center the current location in the map and reset markers

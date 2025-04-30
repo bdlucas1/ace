@@ -699,15 +699,23 @@ async function queryCourseFeatures(name, latlon) {
 
     // query language doesn't support querying for features within a polygon
     // so instead query for all features within a certain distance, then filter
+    //
+    // TODO: the "nwr" for fairways picks up relations, which are used to group the
+    // outer and inner loops of fairways that surround greens. Do we need to do this
+    // for any of the other feature types as well? These seem to come through from
+    // osm2geojson as features with geometry.coordinates.length>1 (i.e. muliple loops)
+    // and also properties.type=="multipolygon" (although probably just the multiple loops
+    // is sufficient for it to be displayed correctly)
+    //
     const distance = 5000
     const featuresQuery = `
         (
            way[golf="hole"](around:${distance},${lat},${lon});
            way[golf="tee"](around:${distance},${lat},${lon});
-           way[golf="fairway"](around:${distance},${lat},${lon});
+           nwr[golf="fairway"](around:${distance},${lat},${lon});
            way[golf="bunker"](around:${distance},${lat},${lon});
            way[golf="green"](around:${distance},${lat},${lon});
-           way[name='${name}'];
+           way[name='${name}']; // this picks up course boundaries
         );
     `
     const features = await query(featuresQuery)
@@ -732,6 +740,8 @@ async function queryCourseFeatures(name, latlon) {
             return false
         } if (feature.geometry.type == "Polygon") {
             // tee, bunker, fairway, green
+            if (feature.geometry.coordinates.length > 1)
+                print("features has multiple loops", feature)
             for (const loop of feature.geometry.coordinates)
                 for (const point of loop)
                     if (turf.booleanPointInPolygon(point, courseBounds))

@@ -118,8 +118,22 @@ async function svgUrlIcon(url, className) {
 //
 
 var theMap
+var keys
 
-function loadMap(elt, layerControl = true, locateControl = false) {
+async function getKeys() {
+}
+
+async function manageMap(elt, layerControl = true, locateControl = false) {
+
+    // access keys from local file, if any
+    try {
+        const response = await fetch("keys.yaml")
+        const text = await response.text()
+        keys = jsyaml.load(text)
+    } catch (e) {
+        print("keys not available:", e.reason)
+        keys = {}
+    }
 
     // USGS maps
     // not high enough res
@@ -131,56 +145,39 @@ function loadMap(elt, layerControl = true, locateControl = false) {
     }
 
     // seems to cache for 12h
-    // 200k free per billing period month
-    // I have billing information on file
+    // requires account and key
+    // 200k per month free, billed after that
     function mapBox(style) {
-        const token =
-              "pk.eyJ1IjoiYmRsdWNhczEiLCJhIjoiY2t5cW52dmI1MGx0ZjJ1cGV5NnM1eWw5NyJ9" +
-              ".1ig0mdAnI6dBI5MtVf-JKA"
-        const url = "https://api.mapbox.com/styles/v1/{style}/tiles/{z}/{x}/{y}{r}?access_token={token}"
-        const attribution = `
-            ©<a href='https://www.mapbox.com' target='_blank'>MapBox</a> |
-            ©<a href='https://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap</a>
-        `
-        return L.tileLayer(url, {attribution, style, token, maxZoom})
+        const url = `https://api.mapbox.com/styles/v1/${style}/tiles/{z}/{x}/{y}{r}?access_token=${keys.MapBox}`
+        const attribution = "©<a href='https://www.mapbox.com' target='_blank'>MapBox</a>"
+        return L.tileLayer(url, {attribution, maxZoom})
     }
 
     // seems to cache for 4h
-    // 100k free per month on free plan
-    // no billing on file - hard limit
+    // 100k free per month free, hard limit (?)
     // can limit by domain (?)
     function mapTiler() {
-        const url = "https://api.maptiler.com/maps/satellite/{z}/{x}/{y}{r}.jpg?key=J95t1VSvDVTrfdsKsqyV"
-        return L.tileLayer(url, {maxZoom})
+        const url = `https://api.maptiler.com/maps/satellite/{z}/{x}/{y}{r}.jpg?key=${keys.MapTiler}`
+        const attribution = "©<a href='https://www.maptiler.com' target='_blank'>MapTiler</a>"
+        return L.tileLayer(url, {attribution, maxZoom})
     }
 
-    // no key, no limit?
+    // not sure how long it caches - max-age headers are complicated
+    // free to use, with attribution, in reasonable volume
     function OSM() {
         const url = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-        return L.tileLayer(url, {maxZoom, maxNativeZoom: 19})
+        const attribution = "©<a href='https://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap</a>"
+        return L.tileLayer(url, {attribution, maxZoom, maxNativeZoom: 19})
     }
 
     // seems to cache for 24h
-    // no key, no limit?
+    // public, no key
     // actually goes to zoom 20, but that switches to a less appealing set of imagery
     function ESRI() {
         const url = "https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        return L.tileLayer(url, {maxZoom, maxNativeZoom: 19})
+        const attribution = "©<a href='https://www.esri.com/copyright' target='_blank'>Esri</a>"
+        return L.tileLayer(url, {attribution, maxZoom, maxNativeZoom: 19})
     }
-
-    function DEM1() {
-        const url = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
-        return L.tileLayer(url, {maxZoom, maxNativeZoom: 15})
-    }
-
-    function DEM2() {
-        const token =
-              "pk.eyJ1IjoiYmRsdWNhczEiLCJhIjoiY2t5cW52dmI1MGx0ZjJ1cGV5NnM1eWw5NyJ9" +
-              ".1ig0mdAnI6dBI5MtVf-JKA"
-        const url =  `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token=${token}`
-        return L.tileLayer(url, {maxZoom, maxNativeZoom: 16})
-    }
-
 
     // these will be presented in the layer switch control
     const baseMaps = [
@@ -188,10 +185,7 @@ function loadMap(elt, layerControl = true, locateControl = false) {
         OSM(),
         ESRI(),
 
-        // elevation tiles as images
-        //DEM1()
-        //DEM2()
-
+        // these are less desirable, but keep as backup for future reference
         //mapBox("mapbox/satellite-streets-v12"),
         //mapTiler(),
         //USGS("USGSImageryOnly"),
@@ -225,6 +219,9 @@ function loadMap(elt, layerControl = true, locateControl = false) {
 
 const elevationTileCache =  new Map()
 
+// common elevation code
+// compute fractional tile number from lat,lon
+// then call specialized getEl function
 async function getEl(lat, lon, el) {
 
     // compute fractional tile fx,fy and integer tile x,y
@@ -236,6 +233,9 @@ async function getEl(lat, lon, el) {
     return el.getEl(fx, fy, el)
 }
     
+// get elevation data from an image
+// compute and fetch tile, load image, create ctx
+// gen call specialized rgb2el function
 async function getImgEl(fx, fy, el) {
 
     // get tile data
@@ -271,6 +271,9 @@ async function getImgEl(fx, fy, el) {
     return elevation
 }
 
+// get elevation data from an esri lerc file
+// fetch the file, decode it using esri library,
+// compute pixel coordinates, return pixel
 async function getLercEl(fx, fy, el) {
 
     // load decoder
@@ -298,21 +301,19 @@ async function getLercEl(fx, fy, el) {
     return data.pixels[0][offset]
 }
 
+// relatively low resolution, and data seems to be old - does not have some HBGC features
 // https://www.reddit.com/r/gis/comments/lg3fqa/are_there_any_dem_tile_servers_out_there/
 // uses my api key, could get billed
 const mapboxEl = {
-    xyz2url: (x, y, z) => {
-        const token =
-              "pk.eyJ1IjoiYmRsdWNhczEiLCJhIjoiY2t5cW52dmI1MGx0ZjJ1cGV5NnM1eWw5NyJ9" +
-              ".1ig0mdAnI6dBI5MtVf-JKA"
-        return `https://api.mapbox.com/v4/mapbox.terrain-rgb/${z}/${x}/${y}.pngraw?access_token=${token}`
-    },
+    xyz2url: (x, y, z) =>
+        `https://api.mapbox.com/v4/mapbox.terrain-rgb/${z}/${x}/${y}.pngraw?access_token=${keys.MapBox}`,
     getEl: getImgEl,
     rgb2el: (r, g, b) => (r * 256 * 256 + g * 256 + b) * 0.1 - 10000,
     tileSize: 256,
     z: 15
 }
 
+// relatively low resolution, and data seems to be old - does not have some HBGC features
 // https://github.com/tilezen/joerd/blob/master/docs/formats.md
 // https://aws.amazon.com/blogs/publicsector/announcing-terrain-tiles-on-aws-a-qa-with-mapzen/
 const mapzenEl = {
@@ -323,6 +324,7 @@ const mapzenEl = {
     z: 15
 }
 
+// this seems to be good data compared to other sources at HBGC
 // https://developers.arcgis.com/documentation/tiled-elevation-service/
 // https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer
 // https://app.unpkg.com/lerc@4.0.4/files/README.md
@@ -339,9 +341,13 @@ const esriEl = {
 }
     
 
+// Esri elevation data seems to be the best
+const getElevation = (lat, lon) => getEl(lat, lon, esriEl)
+
+// these are less desirable, but keep for future reference
 //const getElevation = (lat, lon) => getEl(lat, lon, mapboxEl)
 //const getElevation = (lat, lon) => getEl(lat, lon, mapzenEl)
-const getElevation = (lat, lon) => getEl(lat, lon, esriEl)
+
 
 async function getMarkerElevation(marker) {
     const ll = marker.getLatLng()
@@ -969,7 +975,7 @@ async function show() {
     const scorecardElt = document.querySelector("#scorecard")
     const locateElt = document.querySelector("#locate")
 
-    await loadMap(mapElt)
+    await manageMap(mapElt)
     await manageSettings()
     await manageScorecard()
     await manageLocation()
@@ -991,5 +997,3 @@ if (url.searchParams.has("testPos")) {
 }
 
 show()
-
-

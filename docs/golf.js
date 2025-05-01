@@ -944,7 +944,7 @@ async function show() {
     document.body.innerHTML = `
         <div id="layout">
           <div class="main-button show-settings-button" id="show-settings"></div>
-          <div class="main-button help-button" id="help"></div>
+          <!--<div class="main-button help-button" id="help"></div>-->
           <div class="main-button select-course-button" id="select-course"></div>
           <div class="main-button locate-button" id="locate"></div>
           <div class="main-button layer-button" id="layer"></div>

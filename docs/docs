@@ -1,0 +1,17 @@
+  /Users/bdlucas1/Projects/ace.git/docs:
+  drwxr-xr-x  1 bdlucas1  staff   16384 May  1 00:28 .
+  drwxr-xr-x  1 bdlucas1  staff   16384 Apr 30 17:26 ..
+  -rw-r--r--  1 bdlucas1  staff    1217 Apr 30 08:25 .basemaps.txt
+  drwxr-xr-x  1 bdlucas1  staff   16384 Apr 27 00:02 .junk
+  -rw-r--r--  1 bdlucas1  staff     909 Apr 30 16:36 .sh
+  drwxr-xr-x  1 bdlucas1  staff   16384 May  1 00:24 .~
+  -rw-r--r--@ 1 bdlucas1  staff    6355 May  1 00:27 golf.css
+  -rw-r--r--@ 1 bdlucas1  staff    1210 Apr 30 16:58 golf.html
+  -rw-r--r--@ 1 bdlucas1  staff   35052 May  1 00:28 golf.js
+  -rw-r--r--@ 1 bdlucas1  staff   54284 Apr 18 13:09 icon.jpg
+  drwxr-xr-x  1 bdlucas1  staff   16384 May  1 00:27 icons
+  -rw-r--r--  1 bdlucas1  staff     253 Apr 30 16:55 keys.yaml
+  drwxr-xr-x  1 bdlucas1  staff   16384 Apr 24 11:58 node_modules
+  -rw-r--r--  1 bdlucas1  staff  157555 Apr 24 11:58 package-lock.json
+  -rw-r--r--  1 bdlucas1  staff     446 Apr 24 11:58 package.json
+  -rw-r--r--@ 1 bdlucas1  staff     943 Apr 30 23:19 question-mark-svgrepo-com.svg

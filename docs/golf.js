@@ -613,7 +613,7 @@ async function goToCurrentLocation() {
 async function manageLocation() {
     
     // set up location and accuracy marker, and polyline
-    const icon = await svgUrlIcon("crosshair.svg", "crosshair")
+    const icon = await svgUrlIcon("icons/crosshair-marker.svg", "crosshair")
     locationMarker = L.marker([0,0], {icon}).addTo(theMap)
     accuracyMarker = L.circle([0,0], {className: "accuracy"}).addTo(theMap)
     pathLine = L.polyline([], {className: "path-line"}).addTo(theMap)
@@ -633,7 +633,6 @@ async function manageLocation() {
     // locate button moves map to current location
     // TODO: redo using svg for consistency with map location icon (?)
     const locateButton = document.querySelector("#locate")
-    locateButton.innerHTML = "<img src='crosshair.png'></img>"
     locateButton.addEventListener("click", goToCurrentLocation)
 
     // clicking on map adds a marker
@@ -927,7 +926,6 @@ function manageCourses()  {
     }
 
     const selectCourseButton = document.querySelector("#select-course")
-    selectCourseButton.innerHTML = "<img src='golfer.png'></img>"
     selectCourseButton.addEventListener("click", () => selectCourse(false))
 
     // this is our initial action

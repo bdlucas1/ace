@@ -34,9 +34,10 @@ html, body {
     #map, #settings {grid-row: 3; grid-column: 1 / -1;}
 }
 
-/*#plus, #minus, #layer, #locate, #select-course, #show-course {*/
 .main-button {
+
     aspect-ratio: 1 / 1;
+    width: 40px;
     height: 40px;
     line-height: 40px;
     font-size: 40px;
@@ -46,19 +47,17 @@ html, body {
     background: rgba(255,255,255,0.8);
     color: black;
     
-    /* for images like crosshairs */
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    /* for button icons using background image */
+    background-repeat: no-repeat;
+    background-position: center;
 }
 
-#plus::before {content: "+"; font-weight: bold;}
-#minus::before {content: "−"; font-weight: bold;}
+#plus {background-image: url('icons/plus.svg'); background-size: 60%;}
+#minus {background-image: url('icons/minus.svg'); background-size: 60%;}
 #layer::before {content: "❖";}
-#show-settings::before {content: "≡"; font-weight: bold;}
-
-#locate img {height: 85%;}
-#select-course img {height: 85%;}
+#show-settings {background-image: url('icons/hamburger.svg'); background-size: 60%;}
+#locate {background-image: url('icons/crosshair.png'); background-size: 90%;}
+#select-course {background-image: url('icons/golfer.png');  background-size: 60%;}
 
 #score-row {
 
@@ -125,6 +124,7 @@ html, body {
         stroke: var(--path-color);
     }
 
+    /* crosshair marker */
     .crosshair svg {
         width: 20px;
         height: 20px;

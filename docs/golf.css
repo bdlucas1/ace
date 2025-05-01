@@ -11,13 +11,26 @@ html, body {
     background: var(--background);
 }
 
+#help-page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 1em;
+    color: white;
+    font: 16px sans-serif;
+    visibility: hidden;
+    background: var(--background);
+    height: 100vh;
+    width: 100vw;
+}
+
 #layout {
 
     height: 100%;
     padding: 0.8em;
 
     display: grid;
-    gap: 1em;
+    gap: 3.5vw;
     box-sizing: border-box;
 
     /* rows and columns */
@@ -37,8 +50,8 @@ html, body {
 .main-button {
 
     aspect-ratio: 1 / 1;
-    width: 40px;
-    border-radius: 20px;
+    width: 10vw;
+    border-radius: 5vw;
     border: 1px solid gray;
 
     /* for button icons using text */

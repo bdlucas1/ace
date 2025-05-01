@@ -114,14 +114,25 @@ async function svgUrlIcon(url, className) {
 
 ////////////////////////////////////////////////////////////
 //
+// set up help page
+//
+
+async function manageHelp() {
+    return
+    const helpPageElt = document.querySelector("#help-page")
+    const response = await fetch("help.html")
+    const text = await response.text()
+    helpPageElt.innerHTML = text
+}
+
+
+////////////////////////////////////////////////////////////
+//
 // set up our map using Leaflet
 //
 
 var theMap
 var keys
-
-async function getKeys() {
-}
 
 async function manageMap(elt, layerControl = true, locateControl = false) {
 
@@ -192,7 +203,8 @@ async function manageMap(elt, layerControl = true, locateControl = false) {
     ]
 
     // create the map
-    theMap = L.map(elt, {
+    const mapElt = document.querySelector("#map")
+    theMap = L.map(mapElt, {
         rotate: true,
         zoomSnap: 0.25,
         zoomControl: false,
@@ -972,13 +984,11 @@ async function show() {
               </table>
           </div>
         </div>
+        <!--<div id="help-page"/>-->
     `
-    const layoutElt = document.querySelector("#layout")
-    const mapElt = document.querySelector("#map")
-    const scorecardElt = document.querySelector("#scorecard")
-    const locateElt = document.querySelector("#locate")
 
-    await manageMap(mapElt)
+    await manageHelp()
+    await manageMap()
     await manageSettings()
     await manageScorecard()
     await manageLocation()

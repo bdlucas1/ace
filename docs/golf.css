@@ -53,7 +53,7 @@ html, body {
 
 .plus-button {background-image: url('icons/plus.svg'); background-size: 60%;}
 .minus-button {background-image: url('icons/minus.svg'); background-size: 60%;}
-.layer-button::before {content: "❖";}
+.layer-button {background-image: url('icons/layers.svg'); background-size: 70%;}
 .show-settings-button {background-image: url('icons/hamburger.svg'); background-size: 60%;}
 .locate-button {background-image: url('icons/crosshair.png'); background-size: 90%;}
 .select-course-button {background-image: url('icons/golfer.png');  background-size: 60%;}

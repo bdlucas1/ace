@@ -118,11 +118,20 @@ async function svgUrlIcon(url, className) {
 //
 
 async function manageHelp() {
-    return
+
+    // show help
     const helpPageElt = document.querySelector("#help-page")
     const response = await fetch("help.html")
     const text = await response.text()
     helpPageElt.innerHTML = text
+
+    // clicking on help page closes it
+    helpPageElt.addEventListener("click", () => helpPageElt.style.visibility = "hidden")
+}
+
+function showHelp() {
+    const helpPageElt = document.querySelector("#help-page")
+    helpPageElt.style.visibility = "visible"
 }
 
 
@@ -386,8 +395,13 @@ async function manageSettings() {
         // closing is handled by event propagationg to settingsElt
     }
 
+    // help button
+    addSetting("Show help screen", () => {
+        showHelp()
+    })
+
     // clear course data button
-    addSetting("Clear course data", () => {
+    addSetting("Refresh course data", () => {
         print("clearing local storage")
         localStorage.clear()
     })
@@ -984,7 +998,7 @@ async function show() {
               </table>
           </div>
         </div>
-        <!--<div id="help-page"/>-->
+        <div id="help-page"/>
     `
 
     await manageHelp()

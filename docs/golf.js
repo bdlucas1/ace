@@ -943,12 +943,13 @@ async function show() {
     // TODO: move score-row to manageScorecard
     document.body.innerHTML = `
         <div id="layout">
-          <div class="main-button plus-button" id="plus"></div>
-          <div class="main-button minus-button" id="minus"></div>
-          <div class="main-button layer-button" id="layer"></div>
-          <div class="main-button locate-button" id="locate"></div>
-          <div class="main-button select-course-button" id="select-course"></div>
           <div class="main-button show-settings-button" id="show-settings"></div>
+          <div class="main-button help-button" id="help"></div>
+          <div class="main-button select-course-button" id="select-course"></div>
+          <div class="main-button locate-button" id="locate"></div>
+          <div class="main-button layer-button" id="layer"></div>
+          <div class="main-button minus-button" id="minus"></div>
+          <div class="main-button plus-button" id="plus"></div>
           <div id="map"></div>
           <div id="settings">
               <div id="status"></div>

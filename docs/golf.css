@@ -38,7 +38,6 @@ html, body {
 
     aspect-ratio: 1 / 1;
     width: 40px;
-    height: 40px;
     line-height: 40px;
     font-size: 40px;
     border-radius: 20px;
@@ -52,12 +51,12 @@ html, body {
     background-position: center;
 }
 
-#plus {background-image: url('icons/plus.svg'); background-size: 60%;}
-#minus {background-image: url('icons/minus.svg'); background-size: 60%;}
-#layer::before {content: "❖";}
-#show-settings {background-image: url('icons/hamburger.svg'); background-size: 60%;}
-#locate {background-image: url('icons/crosshair.png'); background-size: 90%;}
-#select-course {background-image: url('icons/golfer.png');  background-size: 60%;}
+.plus-button {background-image: url('icons/plus.svg'); background-size: 60%;}
+.minus-button {background-image: url('icons/minus.svg'); background-size: 60%;}
+.layer-button::before {content: "❖";}
+.show-settings-button {background-image: url('icons/hamburger.svg'); background-size: 60%;}
+.locate-button {background-image: url('icons/crosshair.png'); background-size: 90%;}
+.select-course-button {background-image: url('icons/golfer.png');  background-size: 60%;}
 
 #score-row {
 

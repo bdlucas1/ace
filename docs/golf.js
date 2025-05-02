@@ -177,8 +177,8 @@ async function manageTour() {
         finished: () => atLeast("selectHole-1", 1),
         text: `
             The app has detected that you are at your course.
-            The ${btn('crosshair-icon')} shows your current location.
-            Click hole 1 on scorecard to zoom into first hole.
+            The ${btn('crosshair-icon')} marker shows your current location.
+            Click hole 1 on scorecard to zoom in.
         `, 
     }, {
         finished: () => atLeast("addMarker", 1),

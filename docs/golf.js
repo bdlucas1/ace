@@ -119,6 +119,7 @@ async function svgUrlIcon(url, className) {
 
 async function manageHelp() {
 
+
     // show help
     const helpPageElt = document.querySelector("#help-page")
     const response = await fetch("help.html")
@@ -644,11 +645,22 @@ async function manageLocation() {
     accuracyMarker = L.circle([0,0], {className: "accuracy"}).addTo(theMap)
     pathLine = L.polyline([], {className: "path-line"}).addTo(theMap)
     
-    // watch for position changes, and update locationMarker accordingly
-    // this does not center the locationMarker
-    // if lastPos is already set then it will be a test position so we don't
-    // watch actual position
-    if (!lastPos) {
+    // watch for position changes, or use fake position
+    const url = new URL(document.baseURI)
+    if (url.searchParams.has("testPos")) {
+        // use fake position passed in with url
+        const [lat, lon] = url.searchParams.get("testPos").split(",")
+        print("using fake location", lat, lon)
+        lastPos = {coords: {
+            // meters
+            latitude: Number(lat), longitude: Number(lon), accuracy: 100,
+            altitude: 123.456, altitudeAccuracy: 34.56
+        }}
+        print(lastPos)
+    } else {
+        // watch for position changes, and update locationMarker accordingly
+        // this does not center the locationMarker
+        print("watching for postion changes")
         navigator.geolocation.watchPosition(
             (pos) => moveLocationMarker(pos, false),
             print,
@@ -1010,17 +1022,5 @@ async function show() {
 }
 
 
-// parse parameters
-const url = new URL(document.baseURI)
-if (url.searchParams.has("testPos")) {
-    // testLoc sets lastPos which disables watchPosition
-    const [lat, lon] = url.searchParams.get("testPos").split(",")
-    lastPos = {coords: {
-        // meters
-        latitude: Number(lat), longitude: Number(lon), accuracy: 100,
-        altitude: 123.456, altitudeAccuracy: 34.56
-    }}
-    print(lastPos)
-}
 
 show()

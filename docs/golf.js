@@ -117,17 +117,77 @@ async function svgUrlIcon(url, className) {
 // set up help page
 //
 
-async function manageHelp() {
+var tutorialSteps
+var actionCounts = {}
 
+function updateTutorial() {
+    const tutorialElt = document.querySelector("#tutorial")
+    for (const step of tutorialSteps) {
+        if (!step.finished()) {
+            tutorialElt.innerHTML = step.text
+            if (step.latlon) {
+                const pos = {coords: {latitude: step.latlon[0], longitude: step.latlon[1], accuracy: 0}}
+                print("xxx moving to", pos)
+                moveLocationMarker(pos, false)
+            }
+            return
+        }
+    }
+    tutorialElt.style.display = "none"
+}
 
-    // show help
-    const helpPageElt = document.querySelector("#help-page")
-    const response = await fetch("help.html")
-    const text = await response.text()
-    helpPageElt.innerHTML = text
+function didAction(name) {
+    if (tutorialSteps) {
+        if (!(name in actionCounts))
+            actionCounts[name] = 0
+        actionCounts[name] += 1
+        //print("action count for", name, "is now", actionCounts[name])
+        updateTutorial()
+    }
+}
 
-    // clicking on help page closes it
-    helpPageElt.addEventListener("click", () => helpPageElt.style.visibility = "hidden")
+function manageTutorial() {
+
+    // return if not doing tutorial?
+    const url = new URL(document.baseURI)
+    if (!url.searchParams.has("tutorial"))
+        return
+
+    const btn = name => `<div class='main-button tutorial-icon ${name}'></div>`
+    const atLeast = (action, count) => action in actionCounts && actionCounts[action] >= count
+    tutorialSteps = [{
+        //latlon: [41.31925403108735, -73.89320076036483],
+        text: `Click ${btn('locate-button')} to center map on current location.`,
+        finished: () => atLeast("goToCurrentLocation", 1)
+    }, {
+        text: `Click hole 1 on scorecard to zoom into first hole.`, 
+        finished: () => atLeast("selectHole-1", 1)
+    }, {
+        text: `Click on fairway to create a marker.`, 
+        finished: () => atLeast("addMarker", 1),
+    }, {
+        text: `Click on green to create a marker another marker.`, 
+        finished: () => atLeast("addMarker", 2),
+    }, {
+        text: `Drag one of the markers to move it.`, 
+        finished: () => atLeast("moveMarker", 1),
+
+    }, {
+        text: `Click on a marker to delete it.`,
+        finished: () => atLeast("removeMarker", 1)
+    }, {
+        text: `Click on ${btn('select-course-button')} to select another course.`,
+        finished: () => atLeast("selectCourse", 1)
+    }]
+
+    // show tutorial box
+    const mapElt = document.querySelector("#map")
+    const tutorialElt = document.createElement("div")
+    tutorialElt.id = "tutorial"
+    mapElt.appendChild(tutorialElt)
+
+    // kick it off
+    updateTutorial()
 }
 
 function showHelp() {
@@ -435,6 +495,10 @@ async function selectHole(holeNumber) {
 
     print("selectHole", holeNumber)
 
+    // update tutorial
+    didAction("selectHole-" + holeNumber)
+
+
     // deselect currently selected hole
     if (selectedHole) {
         document.querySelector(`#hole-number-${selectedHole}`).classList.remove("selected")
@@ -627,8 +691,12 @@ async function moveLocationMarker(pos, center) {
 }
 
 // center the current location in the map and reset markers
-async function goToCurrentLocation() {
+async function goToCurrentLocation(userAction = false) {
     
+    // advance tutorial
+    if (userAction)
+        didAction("goToCurrentLocation")
+
     // center on current position
     const pos = await getPos()
     moveLocationMarker(pos, true)
@@ -657,7 +725,8 @@ async function manageLocation() {
             altitude: 123.456, altitudeAccuracy: 34.56
         }}
         print(lastPos)
-    } else {
+    } else if (!url.searchParams.has("tutorial")) {
+        // 
         // watch for position changes, and update locationMarker accordingly
         // this does not center the locationMarker
         print("watching for postion changes")
@@ -671,7 +740,7 @@ async function manageLocation() {
     // locate button moves map to current location
     // TODO: redo using svg for consistency with map location icon (?)
     const locateButton = document.querySelector("#locate")
-    locateButton.addEventListener("click", goToCurrentLocation)
+    locateButton.addEventListener("click", () => goToCurrentLocation(true))
 
     // clicking on map adds a marker
     // TODO: use svgUrlIcon, and design it so that viewBox is the grab area
@@ -687,6 +756,7 @@ async function manageLocation() {
             autoPanOnFocus: false, // https://github.com/Raruto/leaflet-rotate/issues/28
         }).addTo(theMap)
         pathMarkers.push(marker)
+        didAction("addMarker")
 
         // redraw line and update distance info to include new marker
         updateLine()
@@ -696,12 +766,14 @@ async function manageLocation() {
             marker.remove()
             pathMarkers = pathMarkers.filter(m => m !== marker)
             updateLine()
+            didAction("removeMarker")
         })
 
         // dragging marker updates line
         marker.on("drag", (e) => {
             //print("drag")
             updateLine()
+            didAction("moveMarker")
         })
     })
 
@@ -895,7 +967,11 @@ async function loadCourse(name, latlon) {
 function manageCourses()  {
 
     // put up markers to select courses centered around current location
-    async function selectCourse(autoSelect) {
+    async function selectCourse(userAction) {
+
+        // update tutorial
+        if (userAction)
+            didAction("selectCourse")
 
         // clean slate
         if (courseMarkerLayer)
@@ -934,7 +1010,7 @@ function manageCourses()  {
                 for (const [courseName, latlon] of Object.entries(courses)) {
                     // if we're near course abort and just load that course
                     // TODO: tune this distance?
-                    if (autoSelect && turfDistance(pos, latlon) < 1000) {
+                    if (!userAction && turfDistance(pos, latlon) < 1000) {
                         loadCourse(courseName, latlon)
                         return // TODO: break?
                     }
@@ -964,10 +1040,10 @@ function manageCourses()  {
     }
 
     const selectCourseButton = document.querySelector("#select-course")
-    selectCourseButton.addEventListener("click", () => selectCourse(false))
+    selectCourseButton.addEventListener("click", () => selectCourse(true))
 
     // this is our initial action
-    selectCourse(true)
+    selectCourse(false)
 }
 
 
@@ -1010,17 +1086,14 @@ async function show() {
               </table>
           </div>
         </div>
-        <div id="help-page"/>
     `
 
-    await manageHelp()
     await manageMap()
     await manageSettings()
     await manageScorecard()
     await manageLocation()
     await manageCourses()
+    await manageTutorial()
 }
-
-
 
 show()

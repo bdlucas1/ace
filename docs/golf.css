@@ -54,10 +54,11 @@ html, body {
 
     aspect-ratio: 1 / 1;
     width: 10vw;
-    border-radius: 5vw;
+    border-radius: 50%;;
     border: 1px solid gray;
 
     /* for button icons using text */
+    /* TODO: can these be % of containing div? */
     line-height: 40px;
     font-size: 33px;
     text-align: center;
@@ -130,6 +131,28 @@ html, body {
     .golf-fairway {stroke: #005000; fill: #005000; fill-opacity: 0.2;}
     .golf-bunker  {stroke: #cbc103; fill: #cbc103; fill-opacity: 0.2;}
     .golf-green   {stroke: #167461; fill: #167461; fill-opacity: 0.2;}
+
+    #tutorial {
+
+        position: relative;
+        z-index: 1000;
+        padding: 2vw;
+        margin: 3vw;
+
+        background: var(--background);
+        color: white;
+        font: 4vw sans-serif;
+
+        border: 1px solid gray;
+        box-shadow: 3px 5px 10px #00000080;
+        border-radius: 2vw;
+
+        .tutorial-icon {
+            display: inline-block;
+            width: 6vw;
+            vertical-align: middle;
+        }
+    }
 
     .svg-icon * {
         vector-effect: non-scaling-stroke;

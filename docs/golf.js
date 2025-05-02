@@ -135,15 +135,14 @@ async function svgUrlIcon(url, className) {
 var tutorialSteps
 var actionCounts = {}
 
-function updateTutorial() {
+async function updateTutorial() {
     const tutorialElt = document.querySelector("#tutorial")
     for (const step of tutorialSteps) {
         if (!step.finished()) {
             tutorialElt.innerHTML = step.text
             if (step.latlon) {
                 const pos = {coords: {latitude: step.latlon[0], longitude: step.latlon[1], accuracy: 0}}
-                print("xxx moving to", pos)
-                moveLocationMarker(pos, false)
+                await moveLocationMarker(pos, false)
             }
             return
         }
@@ -151,17 +150,16 @@ function updateTutorial() {
     tutorialElt.style.display = "none"
 }
 
-function didAction(name) {
+async function didAction(name) {
     if (tutorialSteps) {
         if (!(name in actionCounts))
             actionCounts[name] = 0
         actionCounts[name] += 1
-        //print("action count for", name, "is now", actionCounts[name])
-        updateTutorial()
+        await updateTutorial()
     }
 }
 
-function manageTutorial() {
+async function manageTutorial() {
 
     // return if not doing tutorial?
     const url = new URL(document.baseURI)
@@ -199,10 +197,11 @@ function manageTutorial() {
     const mapElt = document.querySelector("#map")
     const tutorialElt = document.createElement("div")
     tutorialElt.id = "tutorial"
+    tutorialElt.addEventListener("click", (e) => e.stopPropagation())
     mapElt.appendChild(tutorialElt)
 
     // kick it off
-    updateTutorial()
+    await updateTutorial()
 }
 
 function showHelp() {
@@ -306,6 +305,12 @@ async function manageMap(elt, layerControl = true, locateControl = false) {
         print("switching to layer", currentLayerNumber)
         theMap.addLayer(baseMaps[currentLayerNumber])
     })
+
+    // set up location and accuracy marker, and polyline
+    const icon = await svgUrlIcon("icons/crosshair-marker.svg", "crosshair")
+    locationMarker = L.marker([0,0], {icon}).addTo(theMap)
+    accuracyMarker = L.circle([0,0], {className: "accuracy"}).addTo(theMap)
+    pathLine = L.polyline([], {className: "path-line"}).addTo(theMap)
 }
 
 
@@ -661,7 +666,11 @@ async function updateLine() {
     }
 
     // make sure we're in front of course features
-    pathLine.bringToFront()
+    try {
+        pathLine.bringToFront()
+    } catch (e) {
+        // TODO: in tutorial mode this fails initially - why?
+    }
 }
 
 function resetPath() {
@@ -720,28 +729,26 @@ async function goToCurrentLocation(userAction = false) {
     resetPath()
 }
 
+function fakeLocation(lat, lon) {
+    lastPos = {coords: {
+        // meters
+        latitude: Number(lat), longitude: Number(lon), accuracy: 100,
+        altitude: 123.456, altitudeAccuracy: 34.56
+    }}
+    print("using fake location", lastPos)
+}
+
 async function manageLocation() {
-    
-    // set up location and accuracy marker, and polyline
-    const icon = await svgUrlIcon("icons/crosshair-marker.svg", "crosshair")
-    locationMarker = L.marker([0,0], {icon}).addTo(theMap)
-    accuracyMarker = L.circle([0,0], {className: "accuracy"}).addTo(theMap)
-    pathLine = L.polyline([], {className: "path-line"}).addTo(theMap)
     
     // watch for position changes, or use fake position
     const url = new URL(document.baseURI)
     if (url.searchParams.has("testPos")) {
-        // use fake position passed in with url
         const [lat, lon] = url.searchParams.get("testPos").split(",")
-        print("using fake location", lat, lon)
-        lastPos = {coords: {
-            // meters
-            latitude: Number(lat), longitude: Number(lon), accuracy: 100,
-            altitude: 123.456, altitudeAccuracy: 34.56
-        }}
-        print(lastPos)
-    } else if (!url.searchParams.has("tutorial")) {
-        // 
+        fakeLocation(lat, lon)
+    }
+
+    // if lastPos is already set then we are using a fake location so don't watch
+    if (!lastPos) {
         // watch for position changes, and update locationMarker accordingly
         // this does not center the locationMarker
         print("watching for postion changes")
@@ -1047,7 +1054,7 @@ async function loadNearbyCourse(distance = 1000) {
     const pos = await getPos()
     for (const [courseName, latlon] of Object.entries(knownCourses)) {
         if (turfDistance(pos, latlon) < distance) {
-            loadCourse(courseName)
+            await loadCourse(courseName)
             return
         }
     }
@@ -1108,9 +1115,9 @@ async function show() {
     await manageMap()
     await manageSettings()
     await manageScorecard()
+    await manageTutorial()
     await manageLocation()
     await manageCourses()
-    await manageTutorial()
 }
 
 show()

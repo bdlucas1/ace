@@ -78,8 +78,22 @@ html, body {
 .minus-button {background-image: url('icons/minus.svg'); background-size: 60%;}
 .plus-button {background-image: url('icons/plus.svg'); background-size: 60%;}
 
-/* this is for the crosshair marker used as an icon in the tutorial */
-.crosshair-icon {background-image: url('icons/crosshair-marker.svg'); background-size: 60%;}
+/* this is for the crosshair marker used on the map */
+.crosshair-marker {
+
+    background-image: url('icons/crosshair-marker.svg');
+    background-size: 100%;
+    background-position: center;
+
+    width: 5.5vw;
+    aspect-ratio: 1 / 1;
+    translate: -50% -50%;
+
+    pointer-events: none !important;
+}
+
+/* this is for the crosshair marker used as an icon in the tour */
+.crosshair-icon {background-image: url('icons/crosshair-marker.svg'); background-size: 70%;}
 
 
 #score-row {
@@ -168,14 +182,6 @@ html, body {
 
     .path-line {
         stroke: var(--path-color);
-    }
-
-    /* crosshair marker */
-    .crosshair svg {
-        width: 20px;
-        height: 20px;
-        stroke: var(--path-color);
-        stroke-width: 3px;
     }
 
     .accuracy {

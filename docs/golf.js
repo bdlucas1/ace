@@ -93,23 +93,15 @@ function svgIcon(innerSvg, className) {
     return icon
 }
 
-// NOTE: cannot use img for this because can't style in css
-// could use svg with use, but that is fussy, requires two viewboxes, etc.
-// this is cleanest so far
-// the upper left corner of the svg is the reference point,
-// so design the svg accordingly and allow to overflow viewBox if necessary
-// then style in css to size the whole viewBox
-async function svgUrlIcon(url, className) {
-    const response = await fetch(url)
-    const html = await response.text()
+function divIcon(className) {
     const icon = L.divIcon({
-        html,
+        html: `<div class="${className}"></div>`,
         iconSize: [0, 0],
         iconAnchor: [0, 0],
-        className: `svg-icon ${className}`,
     })
     return icon
 }
+
 
 
 ////////////////////////////////////////////////////////////
@@ -183,7 +175,6 @@ async function manageTour() {
     }, {
         finished: () => atLeast("addMarker", 1),
         text: `
-
             Click on fairway to create a marker.
             The info box shows actual distance, elevation change, and plays-like distance.
         `, 
@@ -320,7 +311,7 @@ async function manageMap(elt) {
     })
 
     // set up location and accuracy marker, and polyline
-    const icon = await svgUrlIcon("icons/crosshair-marker.svg", "crosshair")
+    const icon = divIcon("crosshair-marker")
     locationMarker = L.marker([0,0], {icon}).addTo(theMap)
     accuracyMarker = L.circle([0,0], {className: "accuracy"}).addTo(theMap)
     pathLine = L.polyline([], {className: "path-line"}).addTo(theMap)

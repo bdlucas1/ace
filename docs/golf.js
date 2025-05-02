@@ -106,36 +106,98 @@ function divIcon(className) {
 
 ////////////////////////////////////////////////////////////
 //
-// set up help page
+// app tour
 //
 // TODO: add steps for: pan, zoom, +, -, swipe scorecard
+// TODO: create messages area, part of settings (so it can move buttons down) but always visible
+//       addMessage (with optional timeout), removeMessage
+// TODO: make tour div part of messages
+// TODO: add message for loading courses
 //
 
-var tourSteps
-var actionCounts = {}
+const btn = name => `<div class='main-button tour-icon ${name}'></div>`
+const tourSteps = [{
+    latlon: [41.31925403108735, -73.89320076036483],
+    text: `
+        The app has detected that you are at your course.
+        The ${btn('crosshair-icon')} marker shows your current location.
+        Click hole 1 on scorecard to zoom in.
+    `, 
+    waitFor: ["selectHole-1"]
+}, {
+    text: `
+        Click on fairway to create a marker.
+        The info box shows actual distance, elevation change, and plays-like distance.
+    `, 
+    waitFor: ["addMarker"]
+}, {
+    text: `Click on the green to add a marker to the path.`, 
+    waitFor: ["addMarker"]
+}, {
+    text: `Drag one of the markers to move it.`, 
+    waitFor: ["moveMarker"],
+}, {
+    text: `
+        Click the marker on the fairway to delete it so we can see whether
+        Rory McIlroy can reach the green in one.`,
+    waitFor: ["removeMarker"]
+}, {
+    text: `
+        You made par! Enter your score by clicking ${btn('plus-button')} four times.
+        You can enter your score after the hole, or use the plus button like
+        a score clicker as you go.
+    `,
+    waitFor: ["updateScore", "updateScore", "updateScore", "updateScore"]
+}, {
+    text: `
+        Swipe left on the scorecard once to see the back nine, and again to see your
+        total score.
+    `,
+    waitFor: ["scrollCard", "scrollCard"]
+}, {
+    text: `
+        Well done - even par for the round!
+        But somehow you aren't tired yet,
+        so click ${btn('select-course-button')} to check out other courses.
+    `,
+    waitFor: ["selectCourse"]
+}]
+
+var tourStep = -1
+var tourWaiting
 
 async function updateTour() {
     const tourElt = document.querySelector("#tour")
-    for (const step of tourSteps) {
-        if (!step.finished()) {
-            tourElt.innerHTML = step.text
-            if (step.latlon) {
-                const pos = {coords: {latitude: step.latlon[0], longitude: step.latlon[1], accuracy: 0}}
-                await moveLocationMarker(pos, false)
-            }
-            return
+    if (tourStep < tourSteps.length) {
+        const step = tourSteps[tourStep]
+        tourElt.innerHTML = step.text
+        if (step.latlon) {
+            const pos = {coords: {latitude: step.latlon[0], longitude: step.latlon[1], accuracy: 0}}
+            await moveLocationMarker(pos, false)
         }
+    } else {
+        tourStep = -1
+        tourElt.style.display = "none"
     }
-    tourElt.style.display = "none"
 }
 
 async function didAction(name) {
-    if (tourSteps) {
-        if (!(name in actionCounts))
-            actionCounts[name] = 0
-        actionCounts[name] += 1
-        await updateTour()
+    if (tourStep >= 0) {
+        const step = tourSteps[tourStep]
+        if (step.waitFor[tourWaiting] == name)
+            tourWaiting += 1
+        if (tourWaiting == step.waitFor.length) {
+            tourStep += 1
+            tourWaiting = 0
+            await updateTour()
+        }
     }
+}
+
+async function startTour() {
+    tourStep = 0
+    tourWaiting = 0
+    await updateTour()
 }
 
 async function manageTour() {
@@ -145,45 +207,6 @@ async function manageTour() {
     if (!url.searchParams.has("tour"))
         return
 
-    //text: `Click ${btn('locate-button')} to center map on current location.`,
-    //finished: () => atLeast("goToCurrentLocation", 1)
-
-
-    const btn = name => `<div class='main-button tour-icon ${name}'></div>`
-    const atLeast = (action, count) => action in actionCounts && actionCounts[action] >= count
-    tourSteps = [{
-        latlon: [41.31925403108735, -73.89320076036483],
-        finished: () => atLeast("selectHole-1", 1),
-        text: `
-            The app has detected that you are at your course.
-            The ${btn('crosshair-icon')} marker shows your current location.
-            Click hole 1 on scorecard to zoom in.
-        `, 
-    }, {
-        finished: () => atLeast("addMarker", 1),
-        text: `
-            Click on fairway to create a marker.
-            The info box shows actual distance, elevation change, and plays-like distance.
-        `, 
-    }, {
-        finished: () => atLeast("addMarker", 2),
-        text: `Click on the green to add a marker to the path.`, 
-    }, {
-        finished: () => atLeast("moveMarker", 1),
-        text: `Drag one of the markers to move it.`, 
-    }, {
-        finished: () => atLeast("removeMarker", 1),
-        text: `
-            Click the marker on the fairway to delete it so we can see whether
-            Rory McIlroy can reach the green in one.`,
-    }, {
-        finished: () => atLeast("selectCourse", 1),
-        text: `
-            You've finished your round and aren't tired yet.
-            Click ${btn('select-course-button')} to check out other courses.
-        `,
-    }]
-
     // show tour box
     const mapElt = document.querySelector("#map")
     const tourElt = document.createElement("div")
@@ -192,7 +215,7 @@ async function manageTour() {
     mapElt.appendChild(tourElt)
 
     // kick it off
-    await updateTour()
+    await startTour()
 }
 
 function showHelp() {
@@ -573,6 +596,9 @@ function manageScorecard() {
 
     // add or subtract one from score
     function updateScore(holeNumber, update) {
+
+        // advance tour
+        didAction("updateScore")
 
         // update hole score
         const td = document.querySelector(`#hole-score-${holeNumber}`)        

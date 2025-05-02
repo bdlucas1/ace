@@ -123,7 +123,7 @@ async function svgUrlIcon(url, className) {
 
   rename to "tour"
 
-  implement setting lat/lon and/or loading course as part of tutorial step
+  implement setting lat/lon and/or loading course as part of tour step
   this requires reworking the way courses are loaded and position is managed
   for now position has to be passed in in initial url      
   need to understand dependency graph  
@@ -132,14 +132,14 @@ async function svgUrlIcon(url, className) {
 
 */
 
-var tutorialSteps
+var tourSteps
 var actionCounts = {}
 
-async function updateTutorial() {
-    const tutorialElt = document.querySelector("#tutorial")
-    for (const step of tutorialSteps) {
+async function updateTour() {
+    const tourElt = document.querySelector("#tour")
+    for (const step of tourSteps) {
         if (!step.finished()) {
-            tutorialElt.innerHTML = step.text
+            tourElt.innerHTML = step.text
             if (step.latlon) {
                 const pos = {coords: {latitude: step.latlon[0], longitude: step.latlon[1], accuracy: 0}}
                 await moveLocationMarker(pos, false)
@@ -147,61 +147,74 @@ async function updateTutorial() {
             return
         }
     }
-    tutorialElt.style.display = "none"
+    tourElt.style.display = "none"
 }
 
 async function didAction(name) {
-    if (tutorialSteps) {
+    if (tourSteps) {
         if (!(name in actionCounts))
             actionCounts[name] = 0
         actionCounts[name] += 1
-        await updateTutorial()
+        await updateTour()
     }
 }
 
-async function manageTutorial() {
+async function manageTour() {
 
-    // return if not doing tutorial?
+    // return if not doing tour?
     const url = new URL(document.baseURI)
-    if (!url.searchParams.has("tutorial"))
+    if (!url.searchParams.has("tour"))
         return
 
-    const btn = name => `<div class='main-button tutorial-icon ${name}'></div>`
-    const atLeast = (action, count) => action in actionCounts && actionCounts[action] >= count
-    tutorialSteps = [{
-        latlon: [41.31925403108735, -73.89320076036483],
-        text: `Click ${btn('locate-button')} to center map on current location.`,
-        finished: () => atLeast("goToCurrentLocation", 1)
-    }, {
-        text: `Click hole 1 on scorecard to zoom into first hole.`, 
-        finished: () => atLeast("selectHole-1", 1)
-    }, {
-        text: `Click on fairway to create a marker.`, 
-        finished: () => atLeast("addMarker", 1),
-    }, {
-        text: `Click on green to create a marker another marker.`, 
-        finished: () => atLeast("addMarker", 2),
-    }, {
-        text: `Drag one of the markers to move it.`, 
-        finished: () => atLeast("moveMarker", 1),
+    //text: `Click ${btn('locate-button')} to center map on current location.`,
+    //finished: () => atLeast("goToCurrentLocation", 1)
 
+
+    const btn = name => `<div class='main-button tour-icon ${name}'></div>`
+    const atLeast = (action, count) => action in actionCounts && actionCounts[action] >= count
+    tourSteps = [{
+        latlon: [41.31925403108735, -73.89320076036483],
+        finished: () => atLeast("selectHole-1", 1),
+        text: `
+            The app has detected that you are at your course.
+            The ${btn('crosshair-icon')} shows your current location.
+            Click hole 1 on scorecard to zoom into first hole.
+        `, 
     }, {
-        text: `Click on a marker to delete it.`,
-        finished: () => atLeast("removeMarker", 1)
+        finished: () => atLeast("addMarker", 1),
+        text: `
+
+            Click on fairway to create a marker.
+            The info box shows actual distance, elevation change, and plays-like distance.
+        `, 
     }, {
-        text: `Click on ${btn('select-course-button')} to select another course.`,
-        finished: () => atLeast("selectCourse", 1)
+        finished: () => atLeast("addMarker", 2),
+        text: `Click on green to create another marker.`, 
+    }, {
+        finished: () => atLeast("moveMarker", 1),
+        text: `Drag one of the markers to move it.`, 
+    }, {
+        finished: () => atLeast("removeMarker", 1),
+        text: `
+            Click the marker on the fairway to delete it so we can see whether
+            Rory McIlroy can reach the green in one.`,
+    }, {
+        finished: () => atLeast("selectCourse", 1),
+        text: `
+            You've finished your round and aren't tired yet.
+            Click ${btn('select-course-button')} to check out other courses.
+        `,
     }]
 
-    // show tutorial box
+    // show tour box
     const mapElt = document.querySelector("#map")
-    const tutorialElt = document.createElement("div")
-    tutorialElt.id = "tutorial"
-    tutorialElt.addEventListener("click", (e) => e.stopPropagation())
-    mapElt.appendChild(tutorialElt)
+    const tourElt = document.createElement("div")
+    tourElt.id = "tour"
+    tourElt.addEventListener("click", (e) => e.stopPropagation())
+    mapElt.appendChild(tourElt)
 
     // kick it off
-    await updateTutorial()
+    await updateTour()
 }
 
 function showHelp() {
@@ -218,7 +231,7 @@ function showHelp() {
 var theMap
 var keys
 
-async function manageMap(elt, layerControl = true, locateControl = false) {
+async function manageMap(elt) {
 
     // access keys from local file, if any
     try {
@@ -515,9 +528,8 @@ async function selectHole(holeNumber) {
 
     print("selectHole", holeNumber)
 
-    // update tutorial
+    // update tour
     didAction("selectHole-" + holeNumber)
-
 
     // deselect currently selected hole
     if (selectedHole) {
@@ -669,7 +681,7 @@ async function updateLine() {
     try {
         pathLine.bringToFront()
     } catch (e) {
-        // TODO: in tutorial mode this fails initially - why?
+        // TODO: in tour mode this fails initially - why?
     }
 }
 
@@ -717,7 +729,7 @@ async function moveLocationMarker(pos, center) {
 // center the current location in the map and reset markers
 async function goToCurrentLocation(userAction = false) {
     
-    // advance tutorial
+    // advance tour
     if (userAction)
         didAction("goToCurrentLocation")
 
@@ -927,10 +939,10 @@ async function queryCourses(south, west, north, east) {
 async function cacheJSON(key, fun) {
     var value = localStorage.getItem(key)
     if (value) {
-        print("using cached Overpass data for", key)
+        print("using cached data for", key)
         return JSON.parse(value);
     } else {
-        print("querying Overpass for", key)
+        print("querying for", key)
         value = await fun()
         localStorage.setItem(key, JSON.stringify(value));
         return value
@@ -994,7 +1006,7 @@ async function loadCourse(name) {
 // put up markers to select courses centered around current location
 async function selectCourse(userAction) {
 
-    // update tutorial
+    // update tour
     if (userAction)
         didAction("selectCourse")
 
@@ -1115,7 +1127,7 @@ async function show() {
     await manageMap()
     await manageSettings()
     await manageScorecard()
-    await manageTutorial()
+    await manageTour()
     await manageLocation()
     await manageCourses()
 }

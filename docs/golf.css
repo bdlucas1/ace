@@ -78,6 +78,10 @@ html, body {
 .minus-button {background-image: url('icons/minus.svg'); background-size: 60%;}
 .plus-button {background-image: url('icons/plus.svg'); background-size: 60%;}
 
+/* this is for the crosshair marker used as an icon in the tutorial */
+.crosshair-icon {background-image: url('icons/crosshair-marker.svg'); background-size: 60%;}
+
+
 #score-row {
 
     display: flex;
@@ -132,7 +136,7 @@ html, body {
     .golf-bunker  {stroke: #cbc103; fill: #cbc103; fill-opacity: 0.2;}
     .golf-green   {stroke: #167461; fill: #167461; fill-opacity: 0.2;}
 
-    #tutorial {
+    #tour {
 
         position: relative;
         z-index: 1000;
@@ -142,12 +146,13 @@ html, body {
         background: var(--background);
         color: white;
         font: 4vw sans-serif;
+        line-height: 130%;
 
         border: 1px solid gray;
         box-shadow: 3px 5px 10px #00000080;
         border-radius: 2vw;
 
-        .tutorial-icon {
+        .tour-icon {
             display: inline-block;
             width: 6vw;
             vertical-align: middle;

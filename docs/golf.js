@@ -77,7 +77,7 @@ function turfDistance(a, b) {
     return turf.distance(turfPoint(a), turfPoint(b), {units: "meters"})
 }
 
-// TODO: redo marker icon to use svgUrlIcon and get rid of this
+// TODO: use divIcon instead
 function svgIcon(innerSvg, className) {
     const icon = L.divIcon({
         html: `
@@ -88,7 +88,7 @@ function svgIcon(innerSvg, className) {
         iconSize: [0, 0],
         iconAnchor: [0, 0],
         //style: {overflow: visible},
-        className: "svg-icon",
+        //className: "svg-icon",
     })
     return icon
 }
@@ -108,21 +108,8 @@ function divIcon(className) {
 //
 // set up help page
 //
-
-/*
-
-  TODO
-
-  rename to "tour"
-
-  implement setting lat/lon and/or loading course as part of tour step
-  this requires reworking the way courses are loaded and position is managed
-  for now position has to be passed in in initial url      
-  need to understand dependency graph  
-
-  add steps for: pan, zoom, +, -, swipe scorecard
-
-*/
+// TODO: add steps for: pan, zoom, +, -, swipe scorecard
+//
 
 var tourSteps
 var actionCounts = {}
@@ -180,7 +167,7 @@ async function manageTour() {
         `, 
     }, {
         finished: () => atLeast("addMarker", 2),
-        text: `Click on green to create another marker.`, 
+        text: `Click on the green to add a marker to the path.`, 
     }, {
         finished: () => atLeast("moveMarker", 1),
         text: `Drag one of the markers to move it.`, 

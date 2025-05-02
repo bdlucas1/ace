@@ -73,28 +73,10 @@ html, body {
 
 .show-settings-button {background-image: url('icons/hamburger.svg'); background-size: 60%;}
 .select-course-button {background-image: url('icons/golfer.png');  background-size: 60%;}
-.locate-button {background-image: url('icons/crosshair.png'); background-size: 90%;}
+.locate-button {background-image: url('icons/crosshair-button.png'); background-size: 90%;}
 .layer-button {background-image: url('icons/layers.svg'); background-size: 70%;}
 .minus-button {background-image: url('icons/minus.svg'); background-size: 60%;}
 .plus-button {background-image: url('icons/plus.svg'); background-size: 60%;}
-
-/* this is for the crosshair marker used on the map */
-.crosshair-marker {
-
-    background-image: url('icons/crosshair-marker.svg');
-    background-size: 100%;
-    background-position: center;
-
-    width: 5.5vw;
-    aspect-ratio: 1 / 1;
-    translate: -50% -50%;
-
-    pointer-events: none !important;
-}
-
-/* this is for the crosshair marker used as an icon in the tour */
-.crosshair-icon {background-image: url('icons/crosshair-marker.svg'); background-size: 70%;}
-
 
 #score-row {
 
@@ -171,26 +153,43 @@ html, body {
             width: 6vw;
             vertical-align: middle;
         }
+
+        .crosshair-icon {
+            background-image: url('icons/crosshair-marker.svg');
+            background-size: 70%;
+        }
     }
 
-    .svg-icon * {
-        vector-effect: non-scaling-stroke;
-        overflow: visible;
-    }
 
+    /* path from marker to marker */
     --path-color: #318bff;
-
     .path-line {
         stroke: var(--path-color);
     }
 
+    /* this is for the crosshair marker used on the map */
+    .crosshair-marker {
+
+        background-image: url('icons/crosshair-marker.svg');
+        background-size: 100%;
+        background-position: center;
+        
+        width: 5.5vw;
+        aspect-ratio: 1 / 1;
+        translate: -50% -50%;
+        
+        pointer-events: none !important;
+    }
+
+    /* circule indicating positional accuracy */
     .accuracy {
         stroke: var(--path-color);
         stroke-opacity: 0.2;
         fill: var(--path-color);
     }
 
-    svg.path-marker {
+    /* blue circle marker along a path */
+    .path-marker {
 
         /* svg is bigger than circle so it's easier to grab */
         /* TODO: define variables and use calc */
@@ -204,6 +203,7 @@ html, body {
         fill: none;
     }
 
+    /* icon representing a course on the map */
     .course-icon {
 
         display: flex;
@@ -230,6 +230,7 @@ html, body {
         }
     }
 
+    /* info box */
     .leaflet-tooltip {
         font-family: sans-serif;
         font-size: 14px;

@@ -930,7 +930,7 @@ async function cacheJSON(key, fun) {
     }
 }
 
-var knownCourses
+var knownCourses = {}
 
 // TODO: clear course markers?
 async function loadCourse(name) {
@@ -982,86 +982,80 @@ async function loadCourse(name) {
 
 }
 
-function manageCourses()  {
+// put up markers to select courses centered around current location
+async function selectCourse(userAction) {
 
-    // put up markers to select courses centered around current location
-    async function selectCourse(userAction) {
+    // update tutorial
+    if (userAction)
+        didAction("selectCourse")
 
-        // update tutorial
-        if (userAction)
-            didAction("selectCourse")
+    // clean slate
+    if (courseMarkerLayer)
+        courseMarkerLayer.remove()
+    courseMarkerLayer = L.layerGroup().addTo(theMap)
+    holeFeatures = []
+    resetPath()
+    theMap.setBearing(0)
+    theMap.setZoom(selectCourseZoom)
+    if (theMap.getZoom() != selectCourseZoom) {
+        print("awaiting zoomend")
+        await new Promise((resolve, reject) => {theMap.on("zoomend", resolve)})
+        print("zoomend")
+    }
 
-        // clean slate
-        if (courseMarkerLayer)
-            courseMarkerLayer.remove()
-        courseMarkerLayer = L.layerGroup().addTo(theMap)
-        holeFeatures = []
-        resetPath()
-        theMap.setBearing(0)
-        theMap.setZoom(selectCourseZoom)
-        if (theMap.getZoom() != selectCourseZoom) {
-            print("awaiting zoomend")
-            await new Promise((resolve, reject) => {theMap.on("zoomend", resolve)})
-            print("zoomend")
-        }
+    // snap to tile boundaries
+    const tileSize = 0.25 // needs to be power of 2
+    const dn = x => Math.floor(x/tileSize)*tileSize
+    const up = x => Math.floor((x+tileSize)/tileSize)*tileSize
 
-        // snap to tile boundaries
-        const tileSize = 0.25 // needs to be power of 2
-        const dn = x => Math.floor(x/tileSize)*tileSize
-        const up = x => Math.floor((x+tileSize)/tileSize)*tileSize
+    // compute bounding box snapped to tiles of size tileSize deg
+    const bounds = theMap.getBounds()
+    const south = dn(bounds.getSouth())
+    const west = dn(bounds.getWest())
+    const north = up(bounds.getNorth())
+    const east = up(bounds.getEast())
 
-        // compute bounding box snapped to tiles of size tileSize deg
-        const bounds = theMap.getBounds()
-        const south = dn(bounds.getSouth())
-        const west = dn(bounds.getWest())
-        const north = up(bounds.getNorth())
-        const east = up(bounds.getEast())
-
-        // iterate over tiles adding markers
-        const pos = await getPos()
-        for (var s = south; s < north; s += tileSize) {
-            for (var w = west; w < east; w += tileSize) {
-                const n = s + tileSize
-                const e = w + tileSize
-                const key = s + "," + w + "," + n + "," + e
-                knownCourses = await cacheJSON(key, () => queryCourses(s, w, n, e))
-                for (const [courseName, latlon] of Object.entries(knownCourses)) {
-                    // if we're near course abort and just load that course
-                    // TODO: tune this distance?
-                    if (!userAction && turfDistance(pos, latlon) < 1000) {
-                        loadCourse(courseName)
-                        return // TODO: break?
-                    }
-                    var shortName = shorten(courseName)
-                    if (shortName.length > 2)
-                        shortName = shortName.slice(0, 2) + "<br/>" + shortName.slice(2)
-                    const icon = L.divIcon({
-                        html: `<div class="course-icon"><div>${shortName}</div></div>`,
-                        iconSize: [0, 0],
-                        iconAnchor: [0, 0],
-                    })
-                    const marker = L.marker(latlon, {icon}).addTo(theMap).on("click", () => {
-                        courseMarkerLayer.remove()
-                        loadCourse(courseName, latlon)
-                    }).addTo(courseMarkerLayer)
+    // iterate over tiles adding markers
+    const pos = await getPos()
+    for (var s = south; s < north; s += tileSize) {
+        for (var w = west; w < east; w += tileSize) {
+            const n = s + tileSize
+            const e = w + tileSize
+            const key = s + "," + w + "," + n + "," + e
+            const courses = await cacheJSON(key, () => queryCourses(s, w, n, e))
+            Object.assign(knownCourses, courses)
+            for (const [courseName, latlon] of Object.entries(courses)) {
+                // if we're near course abort and just load that course
+                // TODO: tune this distance?
+                if (!userAction && turfDistance(pos, latlon) < 1000) {
+                    loadCourse(courseName)
+                    return // TODO: break?
                 }
+                var shortName = shorten(courseName)
+                if (shortName.length > 2)
+                    shortName = shortName.slice(0, 2) + "<br/>" + shortName.slice(2)
+                const icon = L.divIcon({
+                    html: `<div class="course-icon"><div>${shortName}</div></div>`,
+                    iconSize: [0, 0],
+                    iconAnchor: [0, 0],
+                })
+                const marker = L.marker(latlon, {icon}).addTo(theMap).on("click", () => {
+                    courseMarkerLayer.remove()
+                    loadCourse(courseName, latlon)
+                }).addTo(courseMarkerLayer)
             }
         }
-
-        /*
-        // not available any more
-        // lock screen orientation
-        screen.orientation.lock('portrait')
-            .then(() => print('orientation locked '))
-            .catch(err => print('failed to lock orientation:', err))
-        */
     }
+    print("xxx knownCourses", knownCourses)
+}
+
+async function manageCourses()  {
 
     const selectCourseButton = document.querySelector("#select-course")
     selectCourseButton.addEventListener("click", () => selectCourse(true))
 
     // this is our initial action
-    selectCourse(false)
+    await selectCourse(false)
 }
 
 

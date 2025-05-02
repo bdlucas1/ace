@@ -980,6 +980,8 @@ async function loadCourse(name) {
     print("setview", latlon)
     theMap.setView(latlon, courseZoom)
 
+    // no longer in course select mode
+    courseMarkerLayer.remove()
 }
 
 // put up markers to select courses centered around current location
@@ -1025,12 +1027,6 @@ async function selectCourse(userAction) {
             const courses = await cacheJSON(key, () => queryCourses(s, w, n, e))
             Object.assign(knownCourses, courses)
             for (const [courseName, latlon] of Object.entries(courses)) {
-                // if we're near course abort and just load that course
-                // TODO: tune this distance?
-                if (!userAction && turfDistance(pos, latlon) < 1000) {
-                    loadCourse(courseName)
-                    return // TODO: break?
-                }
                 var shortName = shorten(courseName)
                 if (shortName.length > 2)
                     shortName = shortName.slice(0, 2) + "<br/>" + shortName.slice(2)
@@ -1040,13 +1036,21 @@ async function selectCourse(userAction) {
                     iconAnchor: [0, 0],
                 })
                 const marker = L.marker(latlon, {icon}).addTo(theMap).on("click", () => {
-                    courseMarkerLayer.remove()
                     loadCourse(courseName, latlon)
                 }).addTo(courseMarkerLayer)
             }
         }
     }
-    print("xxx knownCourses", knownCourses)
+}
+
+async function loadNearbyCourse(distance = 1000) {
+    const pos = await getPos()
+    for (const [courseName, latlon] of Object.entries(knownCourses)) {
+        if (turfDistance(pos, latlon) < distance) {
+            loadCourse(courseName)
+            return
+        }
+    }
 }
 
 async function manageCourses()  {
@@ -1056,6 +1060,7 @@ async function manageCourses()  {
 
     // this is our initial action
     await selectCourse(false)
+    await loadNearbyCourse()
 }
 
 

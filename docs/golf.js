@@ -117,6 +117,21 @@ async function svgUrlIcon(url, className) {
 // set up help page
 //
 
+/*
+
+  TODO
+
+  rename to "tour"
+
+  implement setting lat/lon and/or loading course as part of tutorial step
+  this requires reworking the way courses are loaded and position is managed
+  for now position has to be passed in in initial url      
+  need to understand dependency graph  
+
+  add steps for: pan, zoom, +, -, swipe scorecard
+
+*/
+
 var tutorialSteps
 var actionCounts = {}
 
@@ -156,7 +171,7 @@ function manageTutorial() {
     const btn = name => `<div class='main-button tutorial-icon ${name}'></div>`
     const atLeast = (action, count) => action in actionCounts && actionCounts[action] >= count
     tutorialSteps = [{
-        //latlon: [41.31925403108735, -73.89320076036483],
+        latlon: [41.31925403108735, -73.89320076036483],
         text: `Click ${btn('locate-button')} to center map on current location.`,
         finished: () => atLeast("goToCurrentLocation", 1)
     }, {
@@ -915,10 +930,13 @@ async function cacheJSON(key, fun) {
     }
 }
 
+var knownCourses
+
 // TODO: clear course markers?
-async function loadCourse(name, latlon) {
+async function loadCourse(name) {
 
     // get course data
+    const latlon = knownCourses[name]
     const courseFeatures = await cacheJSON(name, () => queryCourseFeatures(name, latlon))
 
     // group features by nearest hole into holeFeatures array
@@ -1006,12 +1024,12 @@ function manageCourses()  {
                 const n = s + tileSize
                 const e = w + tileSize
                 const key = s + "," + w + "," + n + "," + e
-                const courses = await cacheJSON(key, () => queryCourses(s, w, n, e))
-                for (const [courseName, latlon] of Object.entries(courses)) {
+                knownCourses = await cacheJSON(key, () => queryCourses(s, w, n, e))
+                for (const [courseName, latlon] of Object.entries(knownCourses)) {
                     // if we're near course abort and just load that course
                     // TODO: tune this distance?
                     if (!userAction && turfDistance(pos, latlon) < 1000) {
-                        loadCourse(courseName, latlon)
+                        loadCourse(courseName)
                         return // TODO: break?
                     }
                     var shortName = shorten(courseName)

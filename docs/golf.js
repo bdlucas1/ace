@@ -28,17 +28,17 @@ function divLog(kind, ...args) {
 function intercept(fun) {
     var oldFun = console[fun]
     console[fun] = (...args) => {
-        oldFun(...args)
+        if (oldFun)
+            oldFun(...args)
         divLog(fun, ...args)
     }
 }
 
 // intercept stuff to send it to our console element
-for (const fun of ["log", "info", "warning", "error", "trace", "debug"])
+for (const fun of ["log", "info", "error", "warning", "trace", "debug"])
     intercept(fun)
 window.onerror = e => divLog("error", e)
 window.onunhandledrejection = e => divLog("error", e.reason.stack)
-
 
 const print = console.log
 const printj = (j) => print(JSON.stringify(j, null, 2))
@@ -155,7 +155,7 @@ const tourSteps = [{
     waitFor: "removeMarker"
 }, {
     text: `
-        You made par! Enter your score by clicking ${btn('plus-button')} four times.
+        You made par! Enter your score by clicking the ${btn('plus-button')} button above four times.
         <br/><br/>
         You can enter your score after the hole, or use the plus button like
         a score clicker as you go.
@@ -171,13 +171,13 @@ const tourSteps = [{
     text: `
         Well done - even par for the round!
         But somehow you aren't tired yet,
-        so click ${btn('select-course-button')} to check out other courses.
+        so click the ${btn('select-course-button')} button above to check out other courses.
     `,
     waitFor: "selectCourse"
 }, {
     text: `
         That concludes the tour. Click here to use the app.
-        You can rerun the tour any time by clicking ${btn('show-settings-button')}
+        You can rerun the tour any time by clicking the ${btn('show-settings-button')} button above.
     `,
     waitFor: null
 }]
@@ -611,8 +611,24 @@ function manageScorecard() {
     })
 
     // advance tour on scorecard scroll
+    /*
+    // alas not available on safari  
     document.querySelector("#score-row").addEventListener("scrollsnapchange", (e) => {
         didAction("scrollTo-" + e.snapTargetInline.id)
+    })
+    */
+    document.querySelector("#score-row").addEventListener("scroll", (e) => {
+        const elt = document.querySelector("#score-row")
+        let leftmost = null;
+        let minLeft = Infinity;
+        for (const e of elt.children) {
+            const rect = e.getBoundingClientRect();
+            if (rect.left > 0 && rect.left < minLeft) {
+                minLeft = e.left
+                leftmost = e
+            }
+        }
+        didAction("scrollTo-" + leftmost.id)
     })
 
     // add or subtract one from score

@@ -127,7 +127,7 @@ const tourSteps = [{
         Welcome to the tour. Click on this box any time to end the tour
         and use the app.
         <br/><br/>
-        The app has detected that you are at your course.
+        In this scenario the app has detected that you are at your course.
         The ${btn('crosshair-icon')} marker shows your current location.
         <br/><br/>
         To start click hole 1 on scorecard to zoom in.

@@ -710,10 +710,11 @@ async function updateLine() {
             ${elChangeFt >= 0? "+" + Math.round(elChangeFt) : Math.round(elChangeFt)} ft <br/>
             ${Math.round(playsLikeYd)} yd <br/>
         `
+        // TODO: setting to move tips to right side for lefties
         m2.bindTooltip(tip, {
             permanent: true,
-            direction: "right",
-            offset: L.point([15, 0]),
+            direction: "top",
+            offset: L.point([0, -15]),
             className: "distance-info"
         })
     }

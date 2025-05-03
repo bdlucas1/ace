@@ -201,8 +201,8 @@ html, body {
 
         /* svg is bigger than circle so it's easier to grab */
         /* TODO: define variables and use calc */
-        width: 50px; height: 50px;
-        position: relative; top: -25px; left: -25px;        
+        width: 60px; height: 60px;
+        position: relative; top: -30px; left: -30px;        
         circle {r: 10px; cx: 50%; cy: 50%;}
 
         stroke-width: 3px;

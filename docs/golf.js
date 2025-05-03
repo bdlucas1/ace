@@ -131,7 +131,7 @@ const tourSteps = [{
         The app has detected that you are at your course.
         The ${btn('crosshair-icon')} marker shows your current location.
         <br/><br/>
-        Click hole 1 on scorecard to zoom in.
+        To start click hole 1 on scorecard to zoom in.
     `, 
     waitFor: "selectHole-1"
 }, {

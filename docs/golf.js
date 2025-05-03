@@ -112,7 +112,6 @@ function divIcon(className) {
 //
 // app tour
 //
-// TODO: add steps for: pan, zoom
 // TODO: create messages area, part of settings (so it can move buttons down) but always visible
 //       addMessage (with optional timeout), removeMessage
 // TODO: make tour div part of messages
@@ -568,6 +567,14 @@ async function manageSettings() {
 var selectedHole
 var selectedHoleLayer
 var holeFeatures = []
+
+function resetScorecard() {
+    const elt = document.querySelector("#score-row")
+    elt.querySelectorAll(`td`).forEach(e => e.classList.remove("selected"))
+    elt.querySelectorAll(".total-score td").forEach(e => e.innerText = "")
+    elt.querySelectorAll(".hole-score td").forEach(e => e.innerText = "")
+    elt.scrollLeft = 0
+}
 
 async function selectHole(holeNumber) {
 
@@ -1030,6 +1037,9 @@ async function loadCourse(name) {
 
     // advance the tour
     didAction("loadCourse-" + name)
+
+    // clean slate
+    resetScorecard()
 
     // get course data
     const latlon = knownCourses[name]

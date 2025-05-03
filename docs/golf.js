@@ -5,6 +5,10 @@ const courseZoom = 15
 const selectCourseZoom = 11
 const maxZoom = 20
 
+const appPage = "golf.html"
+const tourPage = "golf.html?tour"
+
+
 ////////////////////////////////////////////////////////////
 //
 // utility
@@ -108,7 +112,7 @@ function divIcon(className) {
 //
 // app tour
 //
-// TODO: add steps for: pan, zoom, +, -, swipe scorecard
+// TODO: add steps for: pan, zoom
 // TODO: create messages area, part of settings (so it can move buttons down) but always visible
 //       addMessage (with optional timeout), removeMessage
 // TODO: make tour div part of messages
@@ -116,59 +120,78 @@ function divIcon(className) {
 //
 
 const btn = name => `<div class='main-button tour-icon ${name}'></div>`
+const hand = "<span style='font-size: 120%'>👈</span>"
 const tourSteps = [{
     latlon: [41.31925403108735, -73.89320076036483],
     text: `
+        Welcome to the tour. Click on this box any time to end the tour
+        and use the app.
+        <br/><br/>
         The app has detected that you are at your course.
         The ${btn('crosshair-icon')} marker shows your current location.
+        <br/><br/>
         Click hole 1 on scorecard to zoom in.
     `, 
-    waitFor: ["selectHole-1"]
+    waitFor: "selectHole-1"
 }, {
     text: `
-        Click on fairway to create a marker.
-        The info box shows actual distance, elevation change, and plays-like distance.
+        Click on the fairway to create a marker.
     `, 
-    waitFor: ["addMarker"]
+    waitFor: "addMarker"
 }, {
-    text: `Click on the green to add a marker to the path.`, 
-    waitFor: ["addMarker"]
+    text: `
+        The info box shows actual distance, elevation change, and plays-like distance.
+        <br/><br/>
+        Click on the green to add a marker to the path.
+    `, 
+    waitFor: "addMarker"
 }, {
     text: `Drag one of the markers to move it.`, 
-    waitFor: ["moveMarker"],
+    waitFor: "moveMarker",
 }, {
     text: `
         Click the marker on the fairway to delete it so we can see whether
         Rory McIlroy can reach the green in one.`,
-    waitFor: ["removeMarker"]
+    waitFor: "removeMarker"
 }, {
     text: `
         You made par! Enter your score by clicking ${btn('plus-button')} four times.
+        <br/><br/>
         You can enter your score after the hole, or use the plus button like
         a score clicker as you go.
     `,
-    waitFor: ["updateScore", "updateScore", "updateScore", "updateScore"]
+    waitFor: "updateScore-4"
 }, {
     text: `
-        Swipe left on the scorecard once to see the back nine, and again to see your
-        total score.
+        Now swipe left ${hand} on the scorecard once to see the back nine,
+        and again ${hand} to see your total score.
     `,
-    waitFor: ["scrollCard", "scrollCard"]
+    waitFor: "scrollTo-score-total",
 }, {
     text: `
         Well done - even par for the round!
         But somehow you aren't tired yet,
         so click ${btn('select-course-button')} to check out other courses.
     `,
-    waitFor: ["selectCourse"]
+    waitFor: "selectCourse"
+}, {
+    text: `
+        That concludes the tour. Click here to use the app.
+        You can rerun the tour any time by clicking ${btn('show-settings-button')}
+    `,
+    waitFor: null
 }]
 
 var tourStep = -1
-var tourWaiting
+
+async function startTour() {
+    tourStep = 0
+    await updateTour()
+}
 
 async function updateTour() {
     const tourElt = document.querySelector("#tour")
-    if (tourStep < tourSteps.length) {
+    if (0 <= tourStep && tourStep < tourSteps.length) {
         const step = tourSteps[tourStep]
         tourElt.innerHTML = step.text
         if (step.latlon) {
@@ -181,23 +204,18 @@ async function updateTour() {
     }
 }
 
+async function endTour() {
+    window.location = appPage
+}
+
 async function didAction(name) {
     if (tourStep >= 0) {
         const step = tourSteps[tourStep]
-        if (step.waitFor[tourWaiting] == name)
-            tourWaiting += 1
-        if (tourWaiting == step.waitFor.length) {
+        if (step.waitFor == name) {
             tourStep += 1
-            tourWaiting = 0
             await updateTour()
         }
     }
-}
-
-async function startTour() {
-    tourStep = 0
-    tourWaiting = 0
-    await updateTour()
 }
 
 async function manageTour() {
@@ -211,16 +229,14 @@ async function manageTour() {
     const mapElt = document.querySelector("#map")
     const tourElt = document.createElement("div")
     tourElt.id = "tour"
-    tourElt.addEventListener("click", (e) => e.stopPropagation())
+    tourElt.addEventListener("click", (e) => {
+        endTour()
+        e.stopPropagation()
+    })
     mapElt.appendChild(tourElt)
 
     // kick it off
     await startTour()
-}
-
-function showHelp() {
-    const helpPageElt = document.querySelector("#help-page")
-    helpPageElt.style.visibility = "visible"
 }
 
 
@@ -491,8 +507,8 @@ async function manageSettings() {
     }
 
     // help button
-    addSetting("Show help screen", () => {
-        showHelp()
+    addSetting("Take the tour", () => {
+        window.location = tourPage
     })
 
     // clear course data button
@@ -594,16 +610,21 @@ function manageScorecard() {
         }
     })
 
+    // advance tour on scorecard scroll
+    document.querySelector("#score-row").addEventListener("scrollsnapchange", (e) => {
+        didAction("scrollTo-" + e.snapTargetInline.id)
+    })
+
     // add or subtract one from score
     function updateScore(holeNumber, update) {
-
-        // advance tour
-        didAction("updateScore")
 
         // update hole score
         const td = document.querySelector(`#hole-score-${holeNumber}`)        
         const newScore = Number(td.innerText) + update
         td.innerText = newScore > 0? String(newScore) : " "
+
+        // advance tour
+        didAction("updateScore-" + newScore)
 
         // this assumes the "hole" feature is the first in the array of features for each hole
         const par = holeNumber => holeFeatures[holeNumber][0].properties.par
@@ -767,11 +788,12 @@ async function manageLocation() {
     if (!lastPos) {
         // watch for position changes, and update locationMarker accordingly
         // this does not center the locationMarker
+        lastPos = getPos()
         print("watching for postion changes")
         navigator.geolocation.watchPosition(
             (pos) => moveLocationMarker(pos, false),
             print,
-            {enableHighAccuracy: true}
+            {enableHighAccuracy: true, timeout: 1000}
         )
     }
 
@@ -1098,7 +1120,6 @@ async function show() {
     document.body.innerHTML = `
         <div id="layout">
           <div class="main-button show-settings-button" id="show-settings"></div>
-          <!--<div class="main-button help-button" id="help"></div>-->
           <div class="main-button select-course-button" id="select-course"></div>
           <div class="main-button locate-button" id="locate"></div>
           <div class="main-button layer-button" id="layer"></div>
@@ -1128,12 +1149,21 @@ async function show() {
         </div>
     `
 
-    await manageMap()
-    await manageSettings()
-    await manageScorecard()
-    await manageTour()
-    await manageLocation()
-    await manageCourses()
+    try {
+        await manageMap()
+        await manageSettings()
+        await manageScorecard()
+        await manageTour()
+        await manageLocation()
+        await manageCourses()
+    } catch (e) {
+        // e.g. location service not available
+        // TODO use a message box?
+        print("error", e.message)
+        const mapElt = document.querySelector("#map")
+        mapElt.innerText = e.message
+        mapElt.classList.add("error")
+    }
 }
 
 show()

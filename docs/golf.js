@@ -757,7 +757,10 @@ var pathLine
 async function updateLine() {
 
     // update the polyline
-    const useMarkers = pathMarkers.filter(m => m!=locationMarker || theMap.getBounds().contains(m.getLatLng()))
+    const mapBounds = theMap.getBounds()
+    const loc = locationMarker.getLatLng()
+    const useLocationMarker = mapBounds.contains(loc) || mapBounds.getCenter().distanceTo(loc) < 1000
+    const useMarkers = pathMarkers.filter(m => m != locationMarker || useLocationMarker)
     const lls = useMarkers.map(m => m.getLatLng())
     pathLine.setLatLngs(lls)
     

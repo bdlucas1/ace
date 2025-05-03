@@ -121,6 +121,7 @@ function divIcon(className) {
 
 const btn = name => `<div class='main-button tour-icon ${name}'></div>`
 const hand = "<span style='font-size: 120%'>👈</span>"
+const link = (url, text) => `<a href='${url}' target='_blank' onclick='event.stopPropagation()'>${text}</a>`
 const tourSteps = [{
     latlon: [41.31925403108735, -73.89320076036483],
     text: `
@@ -136,6 +137,8 @@ const tourSteps = [{
 }, {
     text: `
         Click on the fairway to create a marker.
+        <br/><br/>
+        You can drag the map to pan, and pinch to zoom in or out.
     `, 
     waitFor: "addMarker"
 }, {
@@ -168,6 +171,7 @@ const tourSteps = [{
     `,
     waitFor: "scrollTo-score-total",
 }, {
+    /*latlon: [41.31925403108735, -73.89320076036483],*/
     text: `
         Well done - even par for the round!
         But somehow you aren't tired yet,
@@ -176,6 +180,29 @@ const tourSteps = [{
     waitFor: "selectCourse"
 }, {
     text: `
+        Let's check out the course labelled <div class='course-icon tour-icon'><div>M</div></div>
+        to the southeast of your current location.           
+    `,
+    waitFor: "loadCourse-Mohansic Golf Course"
+}, {
+    text: `
+        Oh no! The course is there, but none of the course features are. You can get
+        involved at improving the maps at ${link('https://openstreetmap.org', 'OpenStreetMap')}.
+        Be sure to follow their
+        ${link('https://wiki.openstreetmap.org/wiki/Tag:leisure%3Dgolf_course', 'guidelines for golf courses')}.
+        <br/><br/>
+        But you can still use this app.
+        Let's switch to the aerial view by clicking the ${btn('layer-button')} button above.
+    `,
+    waitFor: "layer"
+}, {
+    latlon: [41.27190532741085, -73.81042076933386],
+    text: `Now we're at the first tee, so as before click hole 1 on scorecard to zoom in.`,
+    waitFor: "selectHole-1"
+}, {
+    text: `
+        You can now pan, zoom, and place markers as before to navigate your way around the course.
+        <br/><br/>
         That concludes the tour. Click here to use the app.
         You can rerun the tour any time by clicking the ${btn('show-settings-button')} button above.
     `,
@@ -334,6 +361,7 @@ async function manageMap(elt) {
         currentLayerNumber = (currentLayerNumber + 1) % baseMaps.length
         print("switching to layer", currentLayerNumber)
         theMap.addLayer(baseMaps[currentLayerNumber])
+        didAction("layer")
     })
 
     // set up location and accuracy marker, and polyline
@@ -507,7 +535,7 @@ async function manageSettings() {
     }
 
     // help button
-    addSetting("Take the tour", () => {
+    addSetting("Start the tour", () => {
         window.location = tourPage
     })
 
@@ -562,6 +590,8 @@ async function selectHole(holeNumber) {
     // do we have hole info to show?
     if (!holeFeatures[holeNumber]) {
         print("no features")
+        const pos = await getPos()
+        theMap.setView([pos.coords.latitude, pos.coords.longitude], holeZoom)
         return
     }
 
@@ -713,8 +743,9 @@ async function updateLine() {
         // TODO: setting to move tips to right side for lefties
         m2.bindTooltip(tip, {
             permanent: true,
-            direction: "top",
-            offset: L.point([0, -15]),
+            direction: "bottom",
+            offset: L.point([0, 15]),
+            draggable: true,
             className: "distance-info"
         })
     }
@@ -996,6 +1027,9 @@ var knownCourses = {}
 
 // TODO: clear course markers?
 async function loadCourse(name) {
+
+    // advance the tour
+    didAction("loadCourse-" + name)
 
     // get course data
     const latlon = knownCourses[name]

@@ -10,6 +10,10 @@ html, body {
     background: var(--background);
 }
 
+a {
+    color: #eeee00 !important;
+}
+
 #help-page {
     position: absolute;
     top: 0;
@@ -157,8 +161,9 @@ html, body {
         border-radius: 2vw;
 
         .tour-icon {
-            display: inline-block;
+            display: inline-flex;
             width: 6vw;
+            height: 6vw;
             vertical-align: middle;
         }
 
@@ -201,8 +206,8 @@ html, body {
 
         /* svg is bigger than circle so it's easier to grab */
         /* TODO: define variables and use calc */
-        width: 60px; height: 60px;
-        position: relative; top: -30px; left: -30px;        
+        width: 80px; height: 80px;
+        position: relative; top: -40px; left: -40px;        
         circle {r: 10px; cx: 50%; cy: 50%;}
 
         stroke-width: 3px;

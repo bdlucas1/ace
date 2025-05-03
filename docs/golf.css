@@ -14,22 +14,6 @@ a {
     color: #eeee00 !important;
 }
 
-#help-page {
-    position: absolute;
-    top: 0;
-    left: 0;
-    box-sizing: border-box;
-    padding: 1em;
-    padding-top: 2em;
-    color: white;
-    font: 16px sans-serif;
-    visibility: hidden;
-    background: var(--background);
-    height: 100vh;
-    width: 100vw;
-    z-index: 100;
-}
-
 #layout {
 
     height: 100%;

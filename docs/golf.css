@@ -135,45 +135,6 @@ a {
     .golf-bunker  {stroke: #cbc103; fill: #cbc103; fill-opacity: 0.2;}
     .golf-green   {stroke: #167461; fill: #167461; fill-opacity: 0.2;}
 
-    /* fallback to display message in case of error on startup */
-    &.error {
-        background: var(--background);
-        font: 4vw sans-serif;
-        color: white;
-        margin-top: 4em;
-        text-align: center;
-    }
-
-    #tour {
-
-        position: relative;
-        z-index: 1000;
-        padding: 2vw;
-        margin: 3vw;
-
-        background: var(--background);
-        color: white;
-        font: 4vw sans-serif;
-        line-height: 145%;
-
-        border: 1px solid gray;
-        box-shadow: 3px 5px 10px #00000080;
-        border-radius: 2vw;
-
-        .tour-icon {
-            display: inline-flex;
-            width: 6vw;
-            height: 6vw;
-            vertical-align: middle;
-        }
-
-        .crosshair-icon {
-            background-image: url('icons/crosshair-marker.svg');
-            background-size: 70%;
-        }
-    }
-
-
     /* path from marker to marker */
     --path-color: #318bff;
     .path-line {
@@ -216,33 +177,6 @@ a {
         fill: none;
     }
 
-    /* icon representing a course on the map */
-    .course-icon {
-
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        width: 30px;
-        height: 30px;
-        border-radius: 100px;
-
-        font-size: 12px;
-        font-family: sans-serif;
-        font-weight: bold;
-        line-height: 1em;
-
-        background: var(--background);
-        color: white;
-
-        /*box-shadow: 2px 1px 3px rgba(0,0,0,0.2);*/
-        border: 2px solid #aaaa00;
-
-        > div {
-            text-align: center;
-        }
-    }
-
     /* info box */
     .leaflet-tooltip {
         font-family: sans-serif;
@@ -268,6 +202,35 @@ a {
 
 }
 
+/* icon representing a course on the map */
+/* used both on map and in tour text */
+.course-icon {
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    width: 30px;
+    height: 30px;
+    border-radius: 100px;
+
+    font-size: 12px;
+    font-family: sans-serif;
+    font-weight: bold;
+    line-height: 1em;
+
+    background: var(--background);
+    color: white;
+
+    /*box-shadow: 2px 1px 3px rgba(0,0,0,0.2);*/
+    border: 2px solid #aaaa00;
+
+    > div {
+        text-align: center;
+    }
+}
+
+
 #settings {
 
     z-index: 100;
@@ -276,9 +239,11 @@ a {
 
     display: grid;
     grid-template-columns: 1fr 1fr;
+    /* enough for 1 row for messages and 4 rows of buttons */
+    grid-template-rows: repeat(5, max-content) 1fr max-content;
     gap: 3vw;
 
-    > * {
+    > #console, > .settings-button, > #status, .message {
         background: var(--background);
         color: white;
         padding: 2vw;
@@ -286,6 +251,50 @@ a {
         border: 1px solid gray;
         box-shadow: 3px 5px 10px #00000080;
         height: fit-content;
+    }
+
+    /* container of messages */
+    #messages {
+
+        /* our position and behavior in parent */
+        grid-column: 1 / 3;
+        visibility: visible !important;
+        &:empty {
+            display: none
+        }
+
+        /* our layout as a container of messages */
+        display: flex;
+        flex-direction: column;
+        gap: 3vw;
+
+        /* message style */
+        .message {
+            color: white;
+            font: 4vw sans-serif;
+        }
+
+        /* tour is a persistent message */
+        #tour {
+
+            /* tweak layout */
+            line-height: 145%;
+            margin-top: -1vw;
+
+            /* buttons used as icons in tour text */
+            .tour-icon {
+                display: inline-flex;
+                width: 6vw;
+                height: 6vw;
+                vertical-align: middle;
+            }
+
+            /* crosshair marker used as icon in tour text */
+            .crosshair-icon {
+                background-image: url('icons/crosshair-marker.svg');
+                background-size: 70%;
+            }
+        }
     }
 
     .settings-button {
@@ -299,6 +308,7 @@ a {
         font-size: 3vw;
         padding: 0.5em;
         overflow: scroll;
+        grid-column: 1 / 3;
 
         > * {
             padding-left: 1em;
@@ -308,7 +318,7 @@ a {
     }
 
     #status {
-        margin-top: auto;
+        grid-row: -2;
     }
 
     #status:empty {
@@ -318,8 +328,7 @@ a {
     #console {
 
         height: 30vh;
-        margin-top: auto;
-        grid-column: 1 / 3;
+        grid-row: -1;
 
         .console-error {
             background: #702000;

@@ -172,7 +172,8 @@ const tourSteps = [{
 }, {
     /*latlon: [41.31925403108735, -73.89320076036483],*/
     text: `
-        Well done - even par for the round!
+        Well done - you finished the round in even par!
+        <br/><br/>
         But somehow you aren't tired yet,
         so click the ${btn('select-course-button')} button above to check out other courses.
     `,
@@ -209,14 +210,24 @@ const tourSteps = [{
 }]
 
 var tourStep = -1
+var tourElt
 
 async function startTour() {
+
     tourStep = 0
+
+    tourElt = showMessage("")
+    tourElt.id = "tour"
+    tourElt.addEventListener("click", (e) => {
+        endTour()
+        e.stopPropagation()
+    })
+
     await updateTour()
 }
 
 async function updateTour() {
-    const tourElt = document.querySelector("#tour")
+    //const tourElt = document.querySelector("#tour")
     if (0 <= tourStep && tourStep < tourSteps.length) {
         const step = tourSteps[tourStep]
         tourElt.innerHTML = step.text
@@ -252,14 +263,9 @@ async function manageTour() {
         return
 
     // show tour box
-    const mapElt = document.querySelector("#map")
-    const tourElt = document.createElement("div")
-    tourElt.id = "tour"
-    tourElt.addEventListener("click", (e) => {
-        endTour()
-        e.stopPropagation()
-    })
-    mapElt.appendChild(tourElt)
+    //const mapElt = document.querySelector("#map")
+    //const tourElt = document.createElement("div")
+    //mapElt.appendChild(tourElt)
 
     // kick it off
     await startTour()
@@ -520,6 +526,23 @@ async function getMarkerElevation(marker) {
 // settings menu
 //
 
+function showMessage(text, timeMs=0) {
+    const msgElt = document.createElement("div")
+    msgElt.classList.add("message")
+    msgElt.innerText = text
+    const messagesElt = document.querySelector("#messages")
+    messagesElt.appendChild(msgElt)
+    if (timeMs)
+        setTimeout(() => removeMessage(msgElt), timeMs)
+    return msgElt
+}
+
+function removeMessage(msgElt) {
+    const parent = msgElt.parentElement
+    if (parent)
+        parent.removeChild(msgElt)
+}
+
 async function manageSettings() {
 
     // set up settings menu
@@ -556,6 +579,10 @@ async function manageSettings() {
     const settingsButton = document.querySelector("#show-settings")
     settingsButton.addEventListener("click", toggleSettings)
     settingsElt.addEventListener("click", toggleSettings)
+
+    // for testing
+    //showMessage("message 1")
+    //showMessage("message 2")
 }
 
 
@@ -1024,8 +1051,10 @@ async function cacheJSON(key, fun) {
         return JSON.parse(value);
     } else {
         print("querying for", key)
+        const msgElt = showMessage("Hang on, fetching course data...")
         value = await fun()
         localStorage.setItem(key, JSON.stringify(value));
+        removeMessage(msgElt)
         return value
     }
 }
@@ -1188,6 +1217,7 @@ async function show() {
           <div class="main-button plus-button" id="plus"></div>
           <div id="map"></div>
           <div id="settings">
+              <div id="messages"></div>
               <div id="status"></div>
               <div id="console"></div>
           </div>
@@ -1220,10 +1250,11 @@ async function show() {
     } catch (e) {
         // e.g. location service not available
         // TODO use a message box?
-        print("error", e.message)
-        const mapElt = document.querySelector("#map")
-        mapElt.innerText = e.message
-        mapElt.classList.add("error")
+        //print("error", e.message)
+        //const mapElt = document.querySelector("#map")
+        //mapElt.innerText = e.message
+        //mapElt.classList.add("error")
+        showMessage(e.message)
     }
 }
 

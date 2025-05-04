@@ -5,8 +5,8 @@ const courseZoom = 15
 const selectCourseZoom = 11
 const maxZoom = 20
 
-const appPage = "golf.html"
-const tourPage = "golf.html?tour"
+const appPage = "."
+const tourPage = ".?tour"
 
 
 ////////////////////////////////////////////////////////////

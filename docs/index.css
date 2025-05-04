@@ -4,23 +4,24 @@ html {
 
 body {
 
+    /* center if on wide display like desktop */
+    margin: auto;
+
     /* limit width for wide displays like desktop (for tour) */
     width: 100vw;
     max-width: 500px;
 
     /* limit height for big displays like desktop (for tour) */
     height: 100vh;
-    container: (height > 1000px) {
-        height: 1000px;
+    @media (min-height: 1000px) {
+        height: 980px;
+        margin-top: 20px;
     }
 
     /* limit height to exclude address bar etc. for mobile browser */
     max-height: -webkit-fill-available;
 
-    /* center if on wide display like desktop */
-    margin: auto;
-
-    /* specify sizes in units of cqw and cqh,
+    /* we will specify sizes in units of cqw and cqh,
        which are percentages of size of this element */
     container-type: size;
 }

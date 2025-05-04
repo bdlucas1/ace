@@ -112,11 +112,6 @@ function divIcon(className) {
 //
 // app tour
 //
-// TODO: create messages area, part of settings (so it can move buttons down) but always visible
-//       addMessage (with optional timeout), removeMessage
-// TODO: make tour div part of messages
-// TODO: add message for loading courses
-//
 
 const btn = name => `<div class='main-button tour-icon ${name}'></div>`
 const hand = "<span style='font-size: 120%'>👈</span>"
@@ -124,9 +119,7 @@ const link = (url, text) => `<a href='${url}' target='_blank' onclick='event.sto
 const tourSteps = [{
     latlon: [41.31925403108735, -73.89320076036483],
     text: `
-        Welcome to the tour. Click on this box any time to end the tour
-        and use the app.
-        <br/><br/>
+        Welcome to the tour.
         In this scenario the app has detected that you are at your course.
         The ${btn('crosshair-icon')} marker shows your current location.
         <br/><br/>
@@ -137,7 +130,7 @@ const tourSteps = [{
     text: `
         Click on the fairway to create a marker.
         <br/><br/>
-        You can drag the map to pan, and pinch to zoom in or out.
+        Tip: you can drag the map to pan, and pinch to zoom in or out.
     `, 
     waitFor: "addMarker"
 }, {
@@ -159,7 +152,7 @@ const tourSteps = [{
     text: `
         You made par! Enter your score by clicking the ${btn('plus-button')} button above four times.
         <br/><br/>
-        You can enter your score after the hole, or use the plus button like
+        Tip: you can enter your score after the hole, or use the plus button like
         a score clicker as you go.
     `,
     waitFor: "updateScore-4"
@@ -203,8 +196,9 @@ const tourSteps = [{
     text: `
         You can now pan, zoom, and place markers as before to navigate your way around the course.
         <br/><br/>
-        That concludes the tour. Click here to use the app.
-        You can rerun the tour any time by clicking the ${btn('show-settings-button')} button above.
+        That concludes the tour.
+        Close this message to use the app.
+        You can rerun the tour any time from the ${btn('show-settings-button')} menu.
     `,
     waitFor: null
 }]
@@ -217,32 +211,35 @@ async function startTour() {
     tourStep = 0
 
     tourElt = showMessage("")
-    tourElt.id = "tour"
-    tourElt.addEventListener("click", (e) => {
-        endTour()
-        e.stopPropagation()
-    })
+    tourElt.classList.add("tour")
+    tourElt.onmessageclose = endTour
 
     await updateTour()
 }
 
 async function updateTour() {
-    //const tourElt = document.querySelector("#tour")
     if (0 <= tourStep && tourStep < tourSteps.length) {
         const step = tourSteps[tourStep]
-        tourElt.innerHTML = step.text
+        updateMessage(tourElt, step.text)
         if (step.latlon) {
             const pos = {coords: {latitude: step.latlon[0], longitude: step.latlon[1], accuracy: 0}}
             await moveLocationMarker(pos, true)
         }
-    } else {
-        tourStep = -1
-        tourElt.style.display = "none"
     }
 }
 
 async function endTour() {
-    window.location = appPage
+    print("tourStep", tourStep, "tourSteps.length", tourSteps.length)
+    if (tourStep != tourSteps.length-1) {
+        const msgElt = showMessage(`
+            You can rerun the tour to see the rest of it at any time
+            from the ${btn('show-settings-button')} menu.
+        `)
+        msgElt.classList.add("tour")
+        msgElt.onmessageclose = () => window.location = appPage
+    } else {
+        window.location = appPage        
+    }
 }
 
 async function didAction(name) {
@@ -526,21 +523,33 @@ async function getMarkerElevation(marker) {
 // settings menu
 //
 
-function showMessage(text, timeMs=0) {
+function showMessage(html, timeMs=0) {
+
     const msgElt = document.createElement("div")
     msgElt.classList.add("message")
-    msgElt.innerText = text
+    msgElt.addEventListener("click", (e) => e.stopPropagation())
+    updateMessage(msgElt, html)
+
     const messagesElt = document.querySelector("#messages")
     messagesElt.appendChild(msgElt)
+
     if (timeMs)
         setTimeout(() => removeMessage(msgElt), timeMs)
+
     return msgElt
+}
+
+function updateMessage(msgElt, html) {
+    msgElt.innerHTML = `<div class='closer'></div>${html}`
+    msgElt.querySelector(".closer").addEventListener("click", () => removeMessage(msgElt))
 }
 
 function removeMessage(msgElt) {
     const parent = msgElt.parentElement
     if (parent)
         parent.removeChild(msgElt)
+    if (msgElt.onmessageclose)
+        msgElt.onmessageclose(msgElt)
 }
 
 async function manageSettings() {
@@ -581,8 +590,8 @@ async function manageSettings() {
     settingsElt.addEventListener("click", toggleSettings)
 
     // for testing
-    //showMessage("message 1")
-    //showMessage("message 2")
+    //showMessage("message 1", 3000)
+    //showMessage("message 2", 5000)
 }
 
 

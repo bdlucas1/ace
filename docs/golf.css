@@ -254,12 +254,23 @@ a {
 
         /* message style */
         .message {
+
             color: white;
             font: 4vw sans-serif;
+
+            .closer {
+                width: 7vw;
+                height: 7vw;
+                margin-left: 1vw;
+                float: right;
+                translate: 2vw -0.6vw;
+                background: url("icons/closer.svg");
+            }
+
         }
 
         /* tour is a persistent message */
-        #tour {
+        .tour {
 
             /* tweak layout */
             line-height: 145%;

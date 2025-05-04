@@ -560,7 +560,7 @@ async function manageSettings() {
         const itemElt = document.createElement("div")
         itemElt.innerText = text
         itemElt.classList.add("settings-button")
-        settingsElt.insertBefore(itemElt, document.querySelector("#status"))
+        settingsElt.insertBefore(itemElt, document.querySelector("#console"))
         itemElt.addEventListener("click", action)
         // closing is handled by event propagationg to settingsElt
     }
@@ -1230,7 +1230,6 @@ async function show() {
           <div id="map"></div>
           <div id="settings">
               <div id="messages"></div>
-              <div id="status"></div>
               <div id="console"></div>
           </div>
           <div id="score-row">

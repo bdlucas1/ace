@@ -4,16 +4,24 @@ html {
 
 body {
 
+    /* limit width for wide displays like desktop (for tour) */
     width: 100vw;
     max-width: 500px;
 
+    /* limit height for big displays like desktop (for tour) */
     height: 100vh;
+    container: (height > 1000px) {
+        height: 1000px;
+    }
+
+    /* limit height to exclude address bar etc. for mobile browser */
     max-height: -webkit-fill-available;
 
-    margin: 0;
-    margin-left: auto;
-    margin-right: auto;
+    /* center if on wide display like desktop */
+    margin: auto;
 
+    /* specify sizes in units of cqw and cqh,
+       which are percentages of size of this element */
     container-type: size;
 }
 
@@ -23,6 +31,7 @@ body {
     background: var(--background);
 
     height: 100%;
+    width: 100%;
     padding: 0.8em;
 
     display: grid;
@@ -33,6 +42,7 @@ body {
     grid-template-rows: max-content max-content 1fr;
     grid-template-columns: auto 1fr auto auto auto 1fr auto auto;
 
+    /* assign children to our layout grid */
     #show-settings {grid-row: 1; grid-column: 1}
     #select-course {grid-row: 1; grid-column: 3;}
     #locate {grid-row: 1; grid-column: 4;}

@@ -233,7 +233,7 @@ async function updateTour() {
         tourElt.innerHTML = step.text
         if (step.latlon) {
             const pos = {coords: {latitude: step.latlon[0], longitude: step.latlon[1], accuracy: 0}}
-            await moveLocationMarker(pos, false)
+            await moveLocationMarker(pos, true)
         }
     } else {
         tourStep = -1

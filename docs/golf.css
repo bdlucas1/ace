@@ -1,3 +1,7 @@
+html {
+    height: -webkit-fill-available;
+}
+
 body {
 
     width: 100vw;

@@ -333,6 +333,8 @@ body {
 
         &.collapsed {
             height: fit-content;
+            width: fit-content;
+            justify-self: center;
             > * {
                 display: none;
             }

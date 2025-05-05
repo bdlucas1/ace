@@ -595,14 +595,27 @@ async function manageSettings() {
 
     // set up settings menu
     const settingsElt = document.querySelector("#settings")
+    const consoleElt = document.querySelector("#console")
     function addSetting(text, action) {
         const itemElt = document.createElement("div")
         itemElt.innerText = text
         itemElt.classList.add("settings-button")
-        settingsElt.insertBefore(itemElt, document.querySelector("#console"))
+        settingsElt.insertBefore(itemElt, consoleElt)
         itemElt.addEventListener("click", action)
         // closing is handled by event propagationg to settingsElt
     }
+
+    // console collapse/expand
+    consoleElt.addEventListener("click", (e) => {
+        if (consoleElt.classList.contains("collapsed")) {
+            consoleElt.classList.remove("collapsed")
+            consoleElt.scrollTo(0, consoleElt.scrollHeight);
+        } else {
+            consoleElt.classList.add("collapsed")
+        }
+        e.stopPropagation()
+    })
+    consoleElt.classList.add("collapsed")
 
     // help button
     addSetting("Start the tour", () => {

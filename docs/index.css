@@ -331,6 +331,16 @@ body {
             text-indent: -1em;
         }
 
+        &.collapsed {
+            height: fit-content;
+            > * {
+                display: none;
+            }
+            &:before {
+                content: "Debug messages";
+            }
+        }
+
     }
 
     #console {

@@ -634,7 +634,6 @@ async function selectHole(holeNumber) {
     if (!holeFeatures[holeNumber]) {
         print("no features")
         const pos = await getPos()
-        print("xxx checking atcourse", loadedCourseName)
         if (await atCourse(pos, loadedCourseName))
             theMap.setView([pos.coords.latitude, pos.coords.longitude], holeZoom)
         return
@@ -718,15 +717,23 @@ function manageScorecard() {
         didAction("updateScore-" + newScore)
 
         // this assumes the "hole" feature is the first in the array of features for each hole
-        const par = holeNumber => holeFeatures[holeNumber][0].properties.par
+        // returns undefined if par is not available
+        const parFor = holeNumber => {
+            const features = holeFeatures[holeNumber]
+            if (!features || !features[0] || !features[0].properties)
+                return undefined
+            return features[0].properties.par
+        }
 
-        // update totals
+        // update total score and total to par
+        // toPar becomes NaN if par is unavailable for any hole,
+        // which causes fmtPar to return blank
         function computeScore(start) {
             for (var holeNumber = start, total = 0, toPar = 0, i = 0; i < 9; i++, holeNumber++) {
                 const score = Number(document.querySelector(`#hole-score-${holeNumber}`).innerText)
                 total += score
                 if (score > 0)
-                    toPar += score - par(holeNumber)
+                    toPar += score - parFor(holeNumber)
             }
             return [total, toPar]
         }                
@@ -734,7 +741,7 @@ function manageScorecard() {
         const [inTotal, inToPar] = computeScore(10)
 
         const total = outTotal + inTotal
-        const fmtToPar = toPar => toPar == 0? "E": toPar > 0? "+" + toPar : toPar
+        const fmtToPar = toPar => toPar==0? "E": toPar>0? "+"+toPar : toPar<0? toPar : ""
         const toPar = inToPar + outToPar
 
         document.querySelector("#out-score").innerText = outTotal > 0? outTotal : ""

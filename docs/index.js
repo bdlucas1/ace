@@ -602,7 +602,6 @@ async function manageSettings() {
 
 var selectedHole
 var selectedHoleLayer
-var holeFeatures = []
 
 function resetScorecard() {
     const elt = document.querySelector("#score-row")
@@ -693,16 +692,14 @@ function manageScorecard() {
     */
     document.querySelector("#score-row").addEventListener("scroll", (e) => {
         const elt = document.querySelector("#score-row")
-        let leftmost = null;
-        let minLeft = Infinity;
+        const right = elt.getBoundingClientRect().right
+        var lastVisibleId
         for (const e of elt.children) {
             const rect = e.getBoundingClientRect();
-            if (rect.left > 0 && rect.left < minLeft) {
-                minLeft = e.left
-                leftmost = e
-            }
+            if (rect.left + rect.width/2 < right)
+                lastVisibleId = e.id
         }
-        didAction("scrollTo-" + leftmost.id)
+        didAction("scrollTo-" + lastVisibleId)
     })
 
     // add or subtract one from score
@@ -1082,6 +1079,7 @@ async function cacheJSON(key, fun) {
 
 var knownCourses = {}
 var loadedCourseName = null
+var holeFeatures = []
 
 // TODO: clear course markers?
 async function loadCourse(name) {

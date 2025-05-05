@@ -1078,6 +1078,7 @@ async function queryCourseFeatures(name, latlon) {
     return courseFeatures
 }
 
+// take the initials of relevant words to display in the course icon on the map
 function shorten(name) {
     var words = name.split(" ")
     words = words.filter(word => /^[A-Z]/.test(word))
@@ -1086,6 +1087,7 @@ function shorten(name) {
     return short_name
 }
 
+// find golf courses within the given lat/lon bounds
 async function queryCourses(south, west, north, east) {
     const q = `way[leisure=golf_course](${south},${west},${north},${east});`
     const courses = await query(q)
@@ -1103,9 +1105,10 @@ async function queryCourses(south, west, north, east) {
 var knownCourses = {}
 var loadedCourseName = null
 var loadedCourseHoleFeatures = []
-var courseMarkerLayer
+var selectCourseMarkerLayer
 
-// TODO: clear course markers?
+// load a course by name
+// sets loadedCourseName and loadedCOurseHoleFeatures
 async function loadCourse(name) {
 
     // advance the tour
@@ -1122,9 +1125,6 @@ async function loadCourse(name) {
     // loadedCourseHoleFeatures is indexed by hole number,
     // and each element is an array of features associated with that hole
     // first element of each array is the hole feature (line representing hole) itself
-    //
-    // TODO: this doesn't really work quite right
-    // BUG? see e.g. James Baird State Park - 16 fairway is assigned to hole 1
 
     // first get the hole feature (line representing hole)
     loadedCourseHoleFeatures = []
@@ -1160,7 +1160,7 @@ async function loadCourse(name) {
     theMap.setView(latlon, courseZoom)
 
     // no longer in course select mode
-    courseMarkerLayer.remove()
+    selectCourseMarkerLayer.remove()
 
     // remember it
     loadedCourseName = name
@@ -1180,9 +1180,9 @@ async function selectCourse(userAction) {
         didAction("selectCourse")
 
     // clean slate
-    if (courseMarkerLayer)
-        courseMarkerLayer.remove()
-    courseMarkerLayer = L.layerGroup().addTo(theMap)
+    if (selectCourseMarkerLayer)
+        selectCourseMarkerLayer.remove()
+    selectCourseMarkerLayer = L.layerGroup().addTo(theMap)
     unloadCourse()
     resetPath()
     theMap.setBearing(0)
@@ -1225,7 +1225,7 @@ async function selectCourse(userAction) {
                 })
                 const marker = L.marker(latlon, {icon}).addTo(theMap).on("click", () => {
                     loadCourse(courseName, latlon)
-                }).addTo(courseMarkerLayer)
+                }).addTo(selectCourseMarkerLayer)
             }
         }
     }

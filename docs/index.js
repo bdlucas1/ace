@@ -147,6 +147,19 @@ async function cacheJSON(key, fun) {
     }
 }
 
+function setAppState(key, value) {
+    var appState = JSON.parse(localStorage.getItem("appState")) || {}
+    appState[key] = value
+    localStorage.setItem("appState", JSON.stringify(appState))
+    print(`ApppState(${key},${value}); state is now`, JSON.stringify(appState))
+}
+
+function getAppState(key, value) {
+    var appState = JSON.parse(localStorage.getItem("appState")) || {}
+    print(`getApppState(${key}); state is`, JSON.stringify(appState))
+    return appState[key]
+}
+
 
 ////////////////////////////////////////////////////////////
 //
@@ -270,6 +283,7 @@ async function updateTour() {
 
 async function endTour() {
     print("tourStep", tourStep, "tourSteps.length", tourSteps.length)
+    setAppState("didTour", true)
     if (tourStep != tourSteps.length-1) {
         const msgElt = showMessage(`
             You can rerun the tour to see the rest of it at any time
@@ -296,7 +310,7 @@ async function manageTour() {
 
     // return if not doing tour?
     const url = new URL(document.baseURI)
-    if (!url.searchParams.has("tour"))
+    if (getAppState("didTour") && !url.searchParams.has("tour"))
         return
 
     // show tour box

@@ -106,6 +106,46 @@ function divIcon(className) {
     return icon
 }
 
+////////////////////////////////////////////////////////////
+//
+// queries
+//
+
+// do an Overpass query against OSM data
+async function query(query) {
+
+    const fullQuery = `
+        [out:json][timeout:25];
+           ${query}
+        out body;
+        >;
+        out skel qt;
+    `
+    const api = "https://overpass-api.de/api/interpreter"
+    const response = await fetch(api, {method: "POST", body: fullQuery,})
+    try {
+        const responseJSON = await response.json()
+        const geojson = osmtogeojson(responseJSON)
+        return geojson
+    } catch(e) {
+        print(response.text())
+    }
+}
+
+async function cacheJSON(key, fun) {
+    var value = localStorage.getItem(key)
+    if (value) {
+        print("using cached data for", key)
+        return JSON.parse(value);
+    } else {
+        print("querying for", key)
+        const msgElt = showMessage("Hang on, fetching course data...")
+        value = await fun()
+        localStorage.setItem(key, JSON.stringify(value));
+        removeMessage(msgElt)
+        return value
+    }
+}
 
 
 ////////////////////////////////////////////////////////////
@@ -630,7 +670,7 @@ async function selectHole(holeNumber) {
     document.querySelector(`#hole-score-${selectedHole}`).classList.add("selected")
 
     // do we have hole info to show?
-    if (!holeFeatures[holeNumber]) {
+    if (!loadedCourseHoleFeatures[holeNumber]) {
         print("no features")
         const pos = await getPos()
         if (await atCourse(pos, loadedCourseName))
@@ -639,7 +679,7 @@ async function selectHole(holeNumber) {
     }
 
     // compute and set bearing from start to end of hole
-    const feature = holeFeatures[holeNumber][0]
+    const feature = loadedCourseHoleFeatures[holeNumber][0]
     const coordinates = feature.geometry.coordinates
     const bearing = turf.bearing(coordinates[0], coordinates[coordinates.length - 1])
     await theMap.setBearing(-bearing)
@@ -647,12 +687,12 @@ async function selectHole(holeNumber) {
     // select and show hole features
     if (selectedHoleLayer)
         theMap.removeLayer(selectedHoleLayer)
-    selectedHoleLayer = L.geoJSON(holeFeatures[holeNumber], {
+    selectedHoleLayer = L.geoJSON(loadedCourseHoleFeatures[holeNumber], {
         style: feature => {return {className: `golf-${feature.properties.golf}`}}
     }).addTo(theMap);
 
     // center hole on map
-    const center = turf.center({type: "FeatureCollection", features: holeFeatures[holeNumber]})
+    const center = turf.center({type: "FeatureCollection", features: loadedCourseHoleFeatures[holeNumber]})
     const [lon, lat] = center.geometry.coordinates
     theMap.setView([lat, lon], holeZoom)
     resetPath()
@@ -716,7 +756,7 @@ function manageScorecard() {
         // this assumes the "hole" feature is the first in the array of features for each hole
         // returns undefined if par is not available
         const parFor = holeNumber => {
-            const features = holeFeatures[holeNumber]
+            const features = loadedCourseHoleFeatures[holeNumber]
             if (!features || !features[0] || !features[0].properties)
                 return undefined
             return features[0].properties.par
@@ -948,30 +988,6 @@ async function manageLocation() {
 // courses
 //
 
-// for selecting courses
-var courseMarkerLayer
-
-// do an Overpass query against OSM data
-async function query(query) {
-
-    const fullQuery = `
-        [out:json][timeout:25];
-           ${query}
-        out body;
-        >;
-        out skel qt;
-    `
-    const api = "https://overpass-api.de/api/interpreter"
-    const response = await fetch(api, {method: "POST", body: fullQuery,})
-    try {
-        const responseJSON = await response.json()
-        const geojson = osmtogeojson(responseJSON)
-        return geojson
-    } catch(e) {
-        print(response.text())
-    }
-}
-
 async function queryCourseFeatures(name, latlon) {
 
     const [lat, lon] = latlon
@@ -1062,24 +1078,11 @@ async function queryCourses(south, west, north, east) {
     return result
 }
 
-async function cacheJSON(key, fun) {
-    var value = localStorage.getItem(key)
-    if (value) {
-        print("using cached data for", key)
-        return JSON.parse(value);
-    } else {
-        print("querying for", key)
-        const msgElt = showMessage("Hang on, fetching course data...")
-        value = await fun()
-        localStorage.setItem(key, JSON.stringify(value));
-        removeMessage(msgElt)
-        return value
-    }
-}
-
 var knownCourses = {}
 var loadedCourseName = null
-var holeFeatures = []
+var loadedCourseHoleFeatures = []
+var courseMarkerLayer
+
 
 // TODO: clear course markers?
 async function loadCourse(name) {
@@ -1094,8 +1097,8 @@ async function loadCourse(name) {
     const latlon = knownCourses[name]
     const courseFeatures = await cacheJSON(name, () => queryCourseFeatures(name, latlon))
 
-    // group features by nearest hole into holeFeatures array
-    // holeFeatures is indexed by hole number,
+    // group features by nearest hole into loadedCourseHoleFeatures array
+    // loadedCourseHoleFeatures is indexed by hole number,
     // and each element is an array of features associated with that hole
     // first element of each array is the hole feature (line representing hole) itself
     //
@@ -1103,12 +1106,12 @@ async function loadCourse(name) {
     // BUG? see e.g. James Baird State Park - 16 fairway is assigned to hole 1
 
     // first get the hole feature (line representing hole)
-    holeFeatures = []
+    loadedCourseHoleFeatures = []
     for (const feature of courseFeatures) {
         if (feature.properties.golf == "hole") {
             // other code depends on the "hole" feature being first in the features array
             const holeNumber = feature.properties.ref
-            holeFeatures[holeNumber] = [feature]
+            loadedCourseHoleFeatures[holeNumber] = [feature]
         }
     }
 
@@ -1118,8 +1121,8 @@ async function loadCourse(name) {
             const centroid = turf.centroid(feature)
             var minDistance = Infinity
             var minHoleNumber
-            for (const holeNumber in holeFeatures) {
-                const holeFeature = holeFeatures[holeNumber][0]
+            for (const holeNumber in loadedCourseHoleFeatures) {
+                const holeFeature = loadedCourseHoleFeatures[holeNumber][0]
                 const distance = turf.pointToLineDistance(centroid, holeFeature)
                 if (distance < minDistance) {
                     minDistance = distance
@@ -1127,7 +1130,7 @@ async function loadCourse(name) {
                 }
             }
             if (minHoleNumber)
-                holeFeatures[minHoleNumber].push(feature) 
+                loadedCourseHoleFeatures[minHoleNumber].push(feature) 
         }
     }
 
@@ -1142,6 +1145,11 @@ async function loadCourse(name) {
     loadedCourseName = name
 }
 
+function unloadCourse() {
+    loadedCourseName = null
+    loadedCourseHoleFeatures = []
+}
+
 // put up markers to select courses centered around current location
 async function selectCourse(userAction) {
 
@@ -1153,8 +1161,7 @@ async function selectCourse(userAction) {
     if (courseMarkerLayer)
         courseMarkerLayer.remove()
     courseMarkerLayer = L.layerGroup().addTo(theMap)
-    loadedCourseName = null
-    holeFeatures = []
+    unloadCourse()
     resetPath()
     theMap.setBearing(0)
     theMap.setZoom(selectCourseZoom)

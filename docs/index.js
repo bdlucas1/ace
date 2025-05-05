@@ -1030,50 +1030,38 @@ async function queryCourseFeatures(name, latlon) {
            nwr[golf="fairway"](around:${distance},${lat},${lon});
            way[golf="bunker"](around:${distance},${lat},${lon});
            way[golf="green"](around:${distance},${lat},${lon});
+           way[golf="driving_range"](around:${distance},${lat},${lon});
            way[name='${name}']; // this picks up course boundaries
         );
     `
     const features = await query(featuresQuery)
 
-    // find the course bounds among the query results
-    // generally should be fast as it appears course bounds will be first
-    // I guess because it was last in the query?
-    var courseBounds
-    for (const feature of features.features) {
-        if (feature.properties.name == name) {
-            courseBounds = feature.geometry
-            break
-        }
-    }
-
-    // now filter the features we found within a certain radius of the course
-    // to include only those actually within the course bounds
-    // we do this filtering here so it gets cached
+    // check if a feature is actually on the course and is a feature type we're interested in
+    const courseBounds = features.features.filter(f => f.properties.name == name)[0]
     function onCourse(feature) {
-        if (feature.properties.leisure == "golf_course") {
+        if (feature.properties.leisure == "golf_course" || feature.properties.golf == "driving_range") {
             // don't want the course bounds in this feature list
             return false
-        } if (feature.geometry.type == "Polygon") {
-            // tee, bunker, fairway, green
-            if (feature.geometry.coordinates.length > 1)
-                print("features has multiple loops", feature)
-            for (const loop of feature.geometry.coordinates)
-                for (const point of loop)
-                    if (turf.booleanPointInPolygon(point, courseBounds))
-                        return true
-        } else if (feature.geometry.type == "LineString") {
-            // hole is defined by a linestring
-            for (const point of feature.geometry.coordinates)
-                if (turf.booleanPointInPolygon(point, courseBounds))
-                    return true
+        } if (["Polygon", "LineString"].includes(feature.geometry.type)) {
+            // tee, bunker, fairway, green, hole
+            if (turf.booleanWithin(feature.geometry, courseBounds))
+                return true
         } else {
             print("unknown feature geometry type", feature.geometry.type)
         }
         print("excluding", feature)
         return false
     }
-    const ownFeatures = features.features.filter(onCourse)
-    return ownFeatures;
+
+    // check if a feature is on a driving range
+    const drivingRanges = features.features.filter(feature => feature.properties.golf == "driving_range")
+    const onDrivingRange = feature => drivingRanges.some(range => turf.booleanWithin(feature.geometry, range))
+
+    // filter the features we found within a certain radius of the course
+    // to include only those actually within the course bounds, and not on a driving range
+    // do this here so it gets cached
+    const courseFeatures = features.features.filter((feature) => onCourse(feature) && !onDrivingRange(feature))
+    return courseFeatures
 }
 
 function shorten(name) {
@@ -1265,7 +1253,7 @@ async function manageCourses()  {
 // entry point
 //
 
-async function show() {
+async function main() {
 
     // TODO: move score-row to manageScorecard
     document.body.innerHTML = `
@@ -1311,18 +1299,9 @@ async function show() {
         await manageLocation()
         await manageCourses()
     } catch (e) {
-        // e.g. location service not available
-        // TODO use a message box?
-        //print("error", e.message)
-        //const mapElt = document.querySelector("#map")
-        //mapElt.innerText = e.message
-        //mapElt.classList.add("error")
         showMessage(e.message)
+        throw e
     }
-
-    printj(window.innerHeight)
-    printj(window.visualViewport.height)
-
 }
 
-show()
+main()

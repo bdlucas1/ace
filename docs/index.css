@@ -26,6 +26,7 @@ body {
 
     --background: #003300;
     background: var(--background);
+    user-select: none;
 
     height: 100%;
     width: 100%;

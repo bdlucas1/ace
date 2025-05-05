@@ -1,3 +1,6 @@
+// © 2025 Bruce D. Lucas https://github.com/bdlucas1
+// SPDX-License-Identifier: AGPL-3.0
+
 "use strict";
 
 const holeZoom = 17

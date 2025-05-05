@@ -1043,7 +1043,7 @@ async function queryCourseFeatures(name, latlon) {
             // don't want the course bounds in this feature list
             return false
         } if (["Polygon", "LineString"].includes(feature.geometry.type)) {
-            // tee, bunker, fairway, green, hole
+            // tee, bunker, fairway, green
             if (turf.booleanWithin(feature.geometry, courseBounds))
                 return true
         } else {

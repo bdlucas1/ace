@@ -1,7 +1,3 @@
-html {
-    height: -webkit-fill-available;
-}
-
 body {
 
     /* center if on wide display like desktop */
@@ -11,15 +7,15 @@ body {
     width: 100vw;
     max-width: 500px;
 
-    /* limit height for big displays like desktop (for tour) */
-    height: 100vh;
+    /* limit height using dynamic viewport height dvh
+       TODO:dvh does not account for navigation bar on Android
+       Neither does window.innerHeight
+   */
+    height: 100dvh;
     @media (min-height: 1000px) {
         height: 980px;
-        margin-top: 20px;
+        margin-top: 20px
     }
-
-    /* limit height to exclude address bar etc. for mobile browser */
-    max-height: -webkit-fill-available;
 
     /* we will specify sizes in units of cqw and cqh,
        which are percentages of size of this element */

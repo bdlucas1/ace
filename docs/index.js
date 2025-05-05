@@ -1250,6 +1250,9 @@ async function show() {
           </div>
         </div>
     `
+    // this was supposed to exclude Android navigation bar, solving the problem with
+    // css dvh, but it didn't seem to, so sticking with css
+    //document.body.style.height = `${window.innerHeight}px`
 
     try {
         await manageMap()
@@ -1267,6 +1270,10 @@ async function show() {
         //mapElt.classList.add("error")
         showMessage(e.message)
     }
+
+    printj(window.innerHeight)
+    printj(window.visualViewport.height)
+
 }
 
 show()

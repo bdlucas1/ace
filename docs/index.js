@@ -634,7 +634,9 @@ async function selectHole(holeNumber) {
     if (!holeFeatures[holeNumber]) {
         print("no features")
         const pos = await getPos()
-        theMap.setView([pos.coords.latitude, pos.coords.longitude], holeZoom)
+        print("xxx checking atcourse", loadedCourseName)
+        if (await atCourse(pos, loadedCourseName))
+            theMap.setView([pos.coords.latitude, pos.coords.longitude], holeZoom)
         return
     }
 
@@ -1072,6 +1074,7 @@ async function cacheJSON(key, fun) {
 }
 
 var knownCourses = {}
+var loadedCourseName = null
 
 // TODO: clear course markers?
 async function loadCourse(name) {
@@ -1129,6 +1132,9 @@ async function loadCourse(name) {
 
     // no longer in course select mode
     courseMarkerLayer.remove()
+
+    // remember it
+    loadedCourseName = name
 }
 
 // put up markers to select courses centered around current location
@@ -1142,6 +1148,7 @@ async function selectCourse(userAction) {
     if (courseMarkerLayer)
         courseMarkerLayer.remove()
     courseMarkerLayer = L.layerGroup().addTo(theMap)
+    loadedCourseName = null
     holeFeatures = []
     resetPath()
     theMap.setBearing(0)
@@ -1190,11 +1197,21 @@ async function selectCourse(userAction) {
     }
 }
 
-async function loadNearbyCourse(distance = 1000) {
+// are we within 1000 m of a course centroid?
+// TODO: use actual course bounds?
+async function atCourse(pos, name, distance = 1000) {
+    if (!name)
+        return false
+    const latlon = knownCourses[name]
+    return turfDistance(pos, latlon) < distance
+}
+
+// if we're at a course load it
+async function loadNearbyCourse() {
     const pos = await getPos()
-    for (const [courseName, latlon] of Object.entries(knownCourses)) {
-        if (turfDistance(pos, latlon) < distance) {
-            await loadCourse(courseName)
+    for (const name in knownCourses) {
+        if (await atCourse(pos, name)) {
+            await loadCourse(name)
             return
         }
     }

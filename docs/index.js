@@ -634,6 +634,11 @@ async function manageSettings() {
     })
     consoleElt.classList.add("collapsed")
 
+    // About info
+    addSetting("About", () => {
+        window.location = "about.html"
+    })
+
     // help button
     addSetting("Start the tour", () => {
         window.location = tourPage

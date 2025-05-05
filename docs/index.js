@@ -227,7 +227,7 @@ const tourSteps = [{
 }, {
     text: `
         Let's look at another course. Click the <div class='course-icon tour-icon'><div>M</div></div>
-        course marker to the southeast of your current location.           
+        course marker on the map to the southeast of your current location.           
     `,
     waitFor: "loadCourse-Mohansic Golf Course"
 }, {

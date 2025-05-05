@@ -165,7 +165,7 @@ const tourSteps = [{
         <br/><br/>
         To start click hole 1 on scorecard to zoom in.
     `, 
-    waitFor: "selectHole-1"
+    waitFor: "loadHole-1"
 }, {
     text: `
         Click on the fairway to create a marker.
@@ -231,7 +231,7 @@ const tourSteps = [{
 }, {
     latlon: [41.27190532741085, -73.81042076933386],
     text: `Now we're at the first tee, so as before click hole 1 on scorecard to zoom in.`,
-    waitFor: "selectHole-1"
+    waitFor: "loadHole-1"
 }, {
     text: `
         You can now pan, zoom, and place markers as before to navigate your way around the course.
@@ -559,7 +559,6 @@ async function getMarkerElevation(marker) {
 
 ////////////////////////////////////////////////////////////
 //
-//
 // settings menu
 //
 
@@ -637,37 +636,26 @@ async function manageSettings() {
 
 ////////////////////////////////////////////////////////////
 //
-// scorecard, selected hole
+// scorecard, loaded hole
 //
 
-var selectedHole
-var selectedHoleLayer
+var loadedHole
+var loadedHoleLayer
 
-function resetScorecard() {
-    const elt = document.querySelector("#score-row")
-    elt.querySelectorAll(`td`).forEach(e => e.classList.remove("selected"))
-    elt.querySelectorAll(".total-score td").forEach(e => e.innerText = "")
-    elt.querySelectorAll(".hole-score td").forEach(e => e.innerText = "")
-    elt.scrollLeft = 0
-}
+async function loadHole(holeNumber) {
 
-async function selectHole(holeNumber) {
-
-    print("selectHole", holeNumber)
+    print("loadHole", holeNumber)
 
     // update tour
-    didAction("selectHole-" + holeNumber)
+    didAction("loadHole-" + holeNumber)
 
-    // deselect currently selected hole
-    if (selectedHole) {
-        document.querySelector(`#hole-number-${selectedHole}`).classList.remove("selected")
-        document.querySelector(`#hole-score-${selectedHole}`).classList.remove("selected")
-    }
+    // switch hole hole
+    unloadHole()
+    loadedHole = holeNumber
 
     // style selected hole on scorecard
-    selectedHole = holeNumber
-    document.querySelector(`#hole-number-${selectedHole}`).classList.add("selected")
-    document.querySelector(`#hole-score-${selectedHole}`).classList.add("selected")
+    document.querySelector(`#hole-number-${loadedHole}`).classList.add("selected")
+    document.querySelector(`#hole-score-${loadedHole}`).classList.add("selected")
 
     // do we have hole info to show?
     if (!loadedCourseHoleFeatures[holeNumber]) {
@@ -685,9 +673,7 @@ async function selectHole(holeNumber) {
     await theMap.setBearing(-bearing)
     
     // select and show hole features
-    if (selectedHoleLayer)
-        theMap.removeLayer(selectedHoleLayer)
-    selectedHoleLayer = L.geoJSON(loadedCourseHoleFeatures[holeNumber], {
+    loadedHoleLayer = L.geoJSON(loadedCourseHoleFeatures[holeNumber], {
         style: feature => {return {className: `golf-${feature.properties.golf}`}}
     }).addTo(theMap);
 
@@ -697,6 +683,27 @@ async function selectHole(holeNumber) {
     theMap.setView([lat, lon], holeZoom)
     resetPath()
 
+}
+
+function unloadHole() {
+    if (loadedHole) {
+        document.querySelector(`#hole-number-${loadedHole}`).classList.remove("selected")
+        document.querySelector(`#hole-score-${loadedHole}`).classList.remove("selected")
+        loadedHole = undefined
+    }
+    if (loadedHoleLayer) {
+        theMap.removeLayer(loadedHoleLayer)
+        loadedHoleLayer = undefined
+    }
+}
+
+function resetScorecard() {
+    const elt = document.querySelector("#score-row")
+    elt.querySelectorAll(`td`).forEach(e => e.classList.remove("selected"))
+    elt.querySelectorAll(".total-score td").forEach(e => e.innerText = "")
+    elt.querySelectorAll(".hole-score td").forEach(e => e.innerText = "")
+    elt.scrollLeft = 0
+    unloadHole()
 }
 
 function manageScorecard() {
@@ -711,14 +718,14 @@ function manageScorecard() {
             var td = document.createElement("td")
             td.innerText = holeNumber
             td.id = `hole-number-${holeNumber}`
-            td.addEventListener("click", function() {selectHole(Number(this.innerText))})
+            td.addEventListener("click", function() {loadHole(Number(this.innerText))})
             table.querySelector(".hole-number").appendChild(td)
 
             // score cell
             td = document.createElement("td")
             td.id = `hole-score-${holeNumber}`
             td.holeNumber = holeNumber
-            td.addEventListener("click", function() {selectHole(Number(this.holeNumber))})
+            td.addEventListener("click", function() {loadHole(Number(this.holeNumber))})
             table.querySelector(".hole-score").appendChild(td)
         }
     })
@@ -791,8 +798,8 @@ function manageScorecard() {
     }
 
     // set up button click handlers
-    document.querySelector("#plus").addEventListener("click", () => updateScore(selectedHole, +1))
-    document.querySelector("#minus").addEventListener("click", () => updateScore(selectedHole, -1))
+    document.querySelector("#plus").addEventListener("click", () => updateScore(loadedHole, +1))
+    document.querySelector("#minus").addEventListener("click", () => updateScore(loadedHole, -1))
 }
 
 
@@ -1083,7 +1090,6 @@ var loadedCourseName = null
 var loadedCourseHoleFeatures = []
 var courseMarkerLayer
 
-
 // TODO: clear course markers?
 async function loadCourse(name) {
 
@@ -1148,6 +1154,7 @@ async function loadCourse(name) {
 function unloadCourse() {
     loadedCourseName = null
     loadedCourseHoleFeatures = []
+    unloadHole()
 }
 
 // put up markers to select courses centered around current location

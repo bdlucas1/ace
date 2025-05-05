@@ -636,7 +636,7 @@ async function manageSettings() {
 
     // About info
     addSetting("About", () => {
-        window.location = "about.html"
+        window.location = "https://github.com/bdlucas1/ace/blob/main/README.md"
     })
 
     // help button

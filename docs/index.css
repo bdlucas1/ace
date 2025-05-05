@@ -134,7 +134,8 @@ body {
     .golf-green   {stroke: #167461; fill: #167461; fill-opacity: 0.2;}
 
     /* fallback - normally not visible */
-    background: var(--background);
+    /* default gray was better, I think - less distracting */
+    /*background: var(--background);*/
 
     /* path from marker to marker */
     --path-color: #318bff;

@@ -109,6 +109,18 @@ function divIcon(className) {
     return icon
 }
 
+// see usage below for example
+// call sharedFetch instead of fetch to deduplicate fetches
+// when the promise resolves and the data is cached then
+// the caller can delete the url from sharedFetchPromises
+var sharedFetchPromises = {}
+function sharedFetch(url) {
+    if (!sharedFetchPromises[url])
+        sharedFetchPromises[url] = fetch(url)
+    return sharedFetchPromises[url]
+}
+
+
 ////////////////////////////////////////////////////////////
 //
 // queries
@@ -455,6 +467,8 @@ async function getEl(lat, lon, el) {
 // get elevation data from an image
 // compute and fetch tile, load image, create ctx
 // gen call specialized rgb2el function
+// TODO: we're not doing a fetch here so can't use sharedFetch - is that a problem?
+// (but not using this at the moment anyway)
 async function getImgEl(fx, fy, el) {
 
     // get tile data
@@ -504,10 +518,11 @@ async function getLercEl(fx, fy, el) {
     if (!elevationTileCache.has(key)) {
         print("fetching elevation tile", key)
         const url = el.xyz2url(x, y, el.z)
-        const response = await fetch(url)
+        const response = await sharedFetch(url)
         const buffer = await response.arrayBuffer()
         const data = Lerc.decode(buffer)
         elevationTileCache.set(key, data)
+        delete sharedFetchPromises[url]
     }
     const data = elevationTileCache.get(key)
     
@@ -564,6 +579,9 @@ const esriEl = {
 const getElevation = (lat, lon) => getEl(lat, lon, esriEl)
 
 // these are less desirable, but keep for future reference
+// TODO: see note above about the use of img and sharedFetch
+// if reinstated check whether multiple fetches for same tile while dragging
+// is an issue
 //const getElevation = (lat, lon) => getEl(lat, lon, mapboxEl)
 //const getElevation = (lat, lon) => getEl(lat, lon, mapzenEl)
 

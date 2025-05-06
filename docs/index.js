@@ -10,7 +10,7 @@ const maxZoom = 20
 
 const appPage = "."
 const tourPage = ".?tour"
-
+const aboutPage = "https://github.com/bdlucas1/ace/blob/main/README.md"
 
 ////////////////////////////////////////////////////////////
 //
@@ -636,7 +636,7 @@ async function manageSettings() {
 
     // About info
     addSetting("About", () => {
-        window.location = "https://github.com/bdlucas1/ace/blob/main/README.md"
+        window.location = aboutPage
     })
 
     // help button

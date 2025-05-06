@@ -1008,11 +1008,10 @@ async function manageLocation() {
     const markerIcon = svgIcon("<circle>", "path-marker")
     theMap.on("click", function(e) {
 
-        // don't do markers unless we're in loaded hole mode
-        // moving such a marker at too high a zoom level can do an enormous number of
-        // fetches for elevation tiles
-        if (!loadedHoleNumber) {
-            print("no hole loaded")
+        // don't do markers unless a course is loaded
+        // moving a marker at low zoom can cause enormouse number of elevation tile fetches
+        if (!loadedCourseName) {
+            print("no course loaded")
             return
         }
 

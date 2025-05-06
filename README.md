@@ -12,3 +12,5 @@ Click on [this link](https://bdlucas1.github.io/ace) to run the app in your brow
 
 You may wish to bookmark the app. On an iPhone if you add the bookmark to your home screen, when you start the app it will take over the entire screen, giving you an experience more like a native app. The app is designed to run in portrait orientation, so if your phone has an orientation sensor I suggest locking your phone orientation while running the app.
 
+You can report issues, provide feedback, ask questions, or make suggestions by [opening an issue](https://github.com/bdlucas1/ace/issues) or [starting a discussion](https://github.com/bdlucas1/ace/discussions).
+

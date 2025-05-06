@@ -8,8 +8,6 @@ const courseZoom = 15
 const selectCourseZoom = 11
 const maxZoom = 20
 
-const appPage = "."
-const tourPage = ".?tour"
 const aboutPage = "https://github.com/bdlucas1/ace/blob/main/README.md"
 
 ////////////////////////////////////////////////////////////
@@ -265,8 +263,7 @@ const tourSteps = [{
         You can now pan, zoom, and place markers as before to navigate your way around the course.
         <br/><br/>
         That concludes the tour.
-        Close this message to use the app.
-        You can rerun the tour any time from the ${btn('show-settings-button')} menu.
+        Close this message to continue with the app.
     `,
     waitFor: null
 }]
@@ -277,7 +274,6 @@ var tourElt
 async function startTour() {
 
     tourStep = 0
-
     tourElt = showMessage("")
     tourElt.classList.add("tour")
     tourElt.onmessageclose = endTour
@@ -299,16 +295,21 @@ async function updateTour() {
 async function endTour() {
     print("tourStep", tourStep, "tourSteps.length", tourSteps.length)
     setAppState("didTour", true)
-    if (tourStep != tourSteps.length-1) {
-        const msgElt = showMessage(`
-            You can rerun the tour to see the rest of it at any time
-            from the ${btn('show-settings-button')} menu.
-        `)
-        msgElt.classList.add("tour")
-        msgElt.onmessageclose = () => window.location = appPage
-    } else {
-        window.location = appPage        
-    }
+    const msgElt = showMessage(`
+        Some final tips:
+        <br/><br/>
+        On an iPhone if you bookmark the app using the "Add to Home Screen" function,
+        when you start the app it will take over the entire screen,
+        giving you an experience more like a native app. 
+        <br/><br/>
+        The app is designed to run in portrait orientation,
+        so if your phone has an orientation sensor I suggest locking your phone orientation
+        while running the app.
+        <br/><br/>
+        Finally, you can rerun the tour any time from the ${btn('show-settings-button')} menu.
+    `)
+    msgElt.classList.add("tour")
+    msgElt.onmessageclose = () => window.location = "."
 }
 
 async function didAction(name) {
@@ -658,8 +659,9 @@ async function manageSettings() {
     })
 
     // help button
-    addSetting("Start the tour", () => {
-        window.location = tourPage
+    addSetting("Take the tour", () => {
+        setAppState("didTour", false)
+        window.location = "."
     })
 
     // clear course data button

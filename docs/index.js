@@ -674,7 +674,7 @@ async function manageSettings() {
 // scorecard, loaded hole
 //
 
-var loadedHole
+var loadedHoleNumber
 var loadedHoleLayer
 
 async function loadHole(holeNumber) {
@@ -686,11 +686,11 @@ async function loadHole(holeNumber) {
 
     // switch hole hole
     unloadHole()
-    loadedHole = holeNumber
+    loadedHoleNumber = holeNumber
 
     // style selected hole on scorecard
-    document.querySelector(`#hole-number-${loadedHole}`).classList.add("selected")
-    document.querySelector(`#hole-score-${loadedHole}`).classList.add("selected")
+    document.querySelector(`#hole-number-${loadedHoleNumber}`).classList.add("selected")
+    document.querySelector(`#hole-score-${loadedHoleNumber}`).classList.add("selected")
 
     // do we have hole info to show?
     if (!loadedCourseHoleFeatures[holeNumber]) {
@@ -721,10 +721,10 @@ async function loadHole(holeNumber) {
 }
 
 function unloadHole() {
-    if (loadedHole) {
-        document.querySelector(`#hole-number-${loadedHole}`).classList.remove("selected")
-        document.querySelector(`#hole-score-${loadedHole}`).classList.remove("selected")
-        loadedHole = undefined
+    if (loadedHoleNumber) {
+        document.querySelector(`#hole-number-${loadedHoleNumber}`).classList.remove("selected")
+        document.querySelector(`#hole-score-${loadedHoleNumber}`).classList.remove("selected")
+        loadedHoleNumber = undefined
     }
     if (loadedHoleLayer) {
         theMap.removeLayer(loadedHoleLayer)
@@ -833,8 +833,8 @@ function manageScorecard() {
     }
 
     // set up button click handlers
-    document.querySelector("#plus").addEventListener("click", () => updateScore(loadedHole, +1))
-    document.querySelector("#minus").addEventListener("click", () => updateScore(loadedHole, -1))
+    document.querySelector("#plus").addEventListener("click", () => updateScore(loadedHoleNumber, +1))
+    document.querySelector("#minus").addEventListener("click", () => updateScore(loadedHoleNumber, -1))
 }
 
 

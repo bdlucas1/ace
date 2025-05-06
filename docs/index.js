@@ -990,6 +990,14 @@ async function manageLocation() {
     const markerIcon = svgIcon("<circle>", "path-marker")
     theMap.on("click", function(e) {
 
+        // don't do markers unless we're in loaded hole mode
+        // moving such a marker at too high a zoom level can do an enormous number of
+        // fetches for elevation tiles
+        if (!loadedHoleNumber) {
+            print("no hole loaded")
+            return
+        }
+
         // create marker
         const marker = L.marker(e.latlng, {
             icon: markerIcon,

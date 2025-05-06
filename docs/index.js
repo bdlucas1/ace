@@ -141,7 +141,8 @@ async function query(query) {
         const geojson = osmtogeojson(responseJSON)
         return geojson
     } catch(e) {
-        print(response.text())
+        print(e)
+        //print(response.text())
     }
 }
 
@@ -1080,7 +1081,7 @@ async function queryCourseFeatures(name, latlon) {
            way[golf="bunker"](around:${distance},${lat},${lon});
            way[golf="green"](around:${distance},${lat},${lon});
            way[golf="driving_range"](around:${distance},${lat},${lon});
-           way[name='${name}']; // this picks up course boundaries
+           way[name="${name}"]; // this picks up course boundaries
         );
     `
     const features = await query(featuresQuery)

@@ -51,12 +51,25 @@ async function getPos() {
         // use last reported by watchPosition
         return lastPos;
     } else {
-        // otherwise ask
-        const pos = await new Promise((resolve, reject) => {
-            const options = {enableHighAccuracy: true, timeout: 5000}
-            navigator.geolocation.getCurrentPosition(resolve, reject, options)
-        })
-        return pos
+        try {
+            const pos = await new Promise((resolve, reject) => {
+                const options = {enableHighAccuracy: true, timeout: 5000}
+                navigator.geolocation.getCurrentPosition(resolve, reject, options)
+            })
+            return pos
+        } catch(e) {
+            const message = `
+                ${e.message}
+                <br/><br/>
+                You may need to enable location services for your browser.
+                <br/><br/>
+                iPhone: Settings | Privacy & Security | Location Services
+                <br/><br/>
+                The browser will then ask you if it is ok to give this app your location,
+            `
+            showMessage(message)
+            throw Error()
+        }
     }
 }
 
@@ -1328,7 +1341,8 @@ async function main() {
         await manageLocation()
         await manageCourses()
     } catch (e) {
-        showMessage(e.message)
+        if (e.message)
+            showMessage(e.message)
         throw e
     }
 }

@@ -65,8 +65,11 @@ async function getPos() {
                 <br/><br/>
                 iPhone: Settings | Privacy & Security | Location Services
                 <br/><br/>
+                Android: Settings | Location | App location permissions
+                <br/><br/>
                 The browser will then ask you if it is ok to give this app your location,
             `
+            print("e", e)
             showMessage(message)
             throw Error()
         }

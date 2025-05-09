@@ -1,7 +1,7 @@
 ## Ace golf map and scorecard browser app
 
 <a href="https://bdlucas1.github.io/ace" target="_blank">
-    <img src="app.png" align="right" width="30%"/>
+    <img src="app.jpg" align="right" width="30%"/>
 </a>
 
 [This app](https://bdlucas1.github.io/ace) runs in a browser on a mobile phone and provides essential on-course functions: a scorecard and a map with golf course features, distance, and elevation information. It runs entirely in a browser so there is no app to install, and it is based entirely on publicly available open-source information, primarily OpenStreetMap. There is no fee or login required (or available). Course data is downloaded as needed and is cached for later use.

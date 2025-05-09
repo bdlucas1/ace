@@ -396,6 +396,7 @@ async function manageMap(elt) {
     theMap.addLayer(layerMaps[currentLayerNumber])
     document.querySelector("#layer").addEventListener("click", () => {
         switchToLayer((currentLayerNumber + 1) % layerMaps.length)
+        didAction("layer")
     })
 
     // set up location and accuracy marker, and polyline

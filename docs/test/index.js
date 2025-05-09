@@ -302,6 +302,16 @@ async function manageTutorial() {
 
 var theMap
 var keys
+var layerMaps
+var currentLayerNumber = 0
+
+function switchToLayer(layerNumber) {
+    theMap.removeLayer(layerMaps[currentLayerNumber])
+    currentLayerNumber = layerNumber
+    print("switching to layer", currentLayerNumber)
+    theMap.addLayer(layerMaps[currentLayerNumber])
+}
+
 
 async function manageMap(elt) {
 
@@ -360,7 +370,7 @@ async function manageMap(elt) {
     }
 
     // these will be presented in the layer switch control
-    const baseMaps = [
+    layerMaps = [
 
         OSM(),
         ESRI(),
@@ -383,14 +393,9 @@ async function manageMap(elt) {
     theMap.on("dragstart", () => didAction("pan"))
 
     // our own layer switcher
-    var currentLayerNumber = 0
-    theMap.addLayer(baseMaps[currentLayerNumber])
+    theMap.addLayer(layerMaps[currentLayerNumber])
     document.querySelector("#layer").addEventListener("click", () => {
-        theMap.removeLayer(baseMaps[currentLayerNumber])
-        currentLayerNumber = (currentLayerNumber + 1) % baseMaps.length
-        print("switching to layer", currentLayerNumber)
-        theMap.addLayer(baseMaps[currentLayerNumber])
-        didAction("layer")
+        switchToLayer((currentLayerNumber + 1) % layerMaps.length)
     })
 
     // set up location and accuracy marker, and polyline
@@ -1123,6 +1128,7 @@ async function loadCourse(name, setView=true) {
     // clean slate
     resetScorecard()
     resetPath()
+    theMap.setBearing(0)
 
     // get course data
     const latlon = knownCourses[name]
@@ -1230,7 +1236,7 @@ async function selectCourse(userAction) {
                     iconAnchor: [0, 0],
                 })
                 const marker = L.marker(latlon, {icon}).addTo(theMap).on("click", () => {
-                    loadCourse(courseName, latlon)
+                    loadCourse(courseName)
                 }).addTo(selectCourseMarkerLayer)
             }
         }

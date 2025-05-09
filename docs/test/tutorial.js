@@ -12,8 +12,8 @@ const tutorialSteps = [{
         await selectCourse(false)
     },
     text: `
-        <p>This tutorial presents a series of steps.
-        Each step describes actions you can perform that illustrate features of the app.
+        <p>This tutorial has a series of steps.
+        Each step has actions you can perform to illustrate app features.
         As you complete each action it will be marked with a checkmark.
         Scroll this box left or right to move between steps.
         Close this box to end the tutorial.<p>
@@ -40,7 +40,6 @@ const tutorialSteps = [{
         clearActions("zoom", "pan")
         const pos = {coords: {latitude: 41.31925403108735, longitude: -73.89320076036483, accuracy: 0}}
         await moveLocationMarker(pos, true)
-        theMap.setBearing(0)
         await loadCourse("Hollow Brook Golf Club", false)
         await loadHole(1)
     },
@@ -98,11 +97,15 @@ const tutorialSteps = [{
         course marker on the map to the southeast of your current location.</p>
     `,
 }, {
+    setup: async () => {
+        await loadCourse("Mohansic Golf Course")
+        switchToLayer(0)
+    },
     text: `
-        <p>This course is shown on OpenStreetMap but none of the course features are available.
-        Check the ${link(aboutPage, 'About')} page for information on getting involved in improving the maps.</p>
+        <p>This course is shown on OpenStreetMap but it has  none of the course features.
+        Check the ${link(aboutPage, 'About')} page to get involved in improving the maps.</p>
 
-        <p>But you can still use the app for this course with the aerial view.</p>
+        <p>However you can still use the app for this course with the aerial view.</p>
 
         <p>${action('layer')} Tap ${btn('layer-button')} to switch to the aerial view.</p>
     `,
@@ -113,6 +116,7 @@ const tutorialSteps = [{
         await theMap.setBearing(0),
         await moveLocationMarker(pos, true)
         await loadNearbyCourse()
+        switchToLayer(1)
     },
     text: `
         <p>Now we're at the first tee.

@@ -53,7 +53,8 @@ async function getPos() {
     } else {
         // otherwise ask
         const pos = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {enableHighAccuracy: true})
+            const options = {enableHighAccuracy: true, timeout: 5000}
+            navigator.geolocation.getCurrentPosition(resolve, reject, options)
         })
         return pos
     }
@@ -177,166 +178,120 @@ function getAppState(key, value) {
 
 ////////////////////////////////////////////////////////////
 //
-// app tour
+// tutorial
 //
 
-const btn = name => `<div class='main-button tour-icon ${name}'></div>`
-const hand = "<span style='font-size: 120%'>👈</span>"
-const link = (url, text) => `<a href='${url}' target='_blank' onclick='event.stopPropagation()'>${text}</a>`
-const tourSteps = [{
-    latlon: [41.31925403108735, -73.89320076036483],
-    text: `
-        Welcome to the tour.
-        In this scenario the app has detected that you are at your course.
-        The ${btn('crosshair-icon')} marker shows your current location.
-        <br/><br/>
-        To start click hole 1 on scorecard to zoom in.
-    `, 
-    waitFor: "loadHole-1"
-}, {
-    text: `
-        Click on the fairway to create a marker.
-        <br/><br/>
-        Tip: you can drag the map to pan, and pinch to zoom in or out.
-    `, 
-    waitFor: "addMarker"
-}, {
-    text: `
-        The info box shows actual distance, elevation change, and plays-like distance.
-        <br/><br/>
-        Click on the green to add a marker to the path.
-    `, 
-    waitFor: "addMarker"
-}, {
-    text: `Drag one of the markers to move it.`, 
-    waitFor: "moveMarker",
-}, {
-    text: `
-        Click the marker on the fairway to delete it so we can see whether
-        Rory McIlroy can reach the green in one.`,
-    waitFor: "removeMarker"
-}, {
-    text: `
-        You made par! Enter your score by clicking the ${btn('plus-button')} button above four times.
-        <br/><br/>
-        Tip: you can enter your score after the hole, or use the plus button like
-        a score clicker as you go.
-    `,
-    waitFor: "updateScore-4"
-}, {
-    text: `
-        Now swipe left ${hand} on the scorecard once to see the back nine,
-        and again ${hand} to see your total score.
-    `,
-    waitFor: "scrollTo-score-total",
-}, {
-    /*latlon: [41.31925403108735, -73.89320076036483],*/
-    text: `
-        Well done - you finished the round in even par!
-        <br/><br/>
-        But somehow you aren't tired yet,
-        so click the ${btn('select-course-button')} button above to check out other courses.
-    `,
-    waitFor: "selectCourse"
-}, {
-    text: `
-        Let's look at another course. Click the <div class='course-icon tour-icon'><div>M</div></div>
-        course marker on the map to the southeast of your current location.           
-    `,
-    waitFor: "loadCourse-Mohansic Golf Course"
-}, {
-    text: `
-        Oh no! The course is there, but none of the course features are. You can get
-        involved at improving the maps at ${link('https://openstreetmap.org', 'OpenStreetMap')}.
-        Be sure to follow their
-        ${link('https://wiki.openstreetmap.org/wiki/Tag:leisure%3Dgolf_course', 'guidelines for golf courses')}.
-        <br/><br/>
-        But you can still use this app.
-        Let's switch to the aerial view by clicking the ${btn('layer-button')} button above.
-    `,
-    waitFor: "layer"
-}, {
-    latlon: [41.27190532741085, -73.81042076933386],
-    text: `Now we're at the first tee, so as before click hole 1 on scorecard to zoom in.`,
-    waitFor: "loadHole-1"
-}, {
-    text: `
-        You can now pan, zoom, and place markers as before to navigate your way around the course.
-        <br/><br/>
-        That concludes the tour.
-        Close this message to continue with the app.
-    `,
-    waitFor: null
-}]
 
-var tourStep = -1
-var tourElt
+var tutorialElt
+var sawFinalMessage = false
 
-async function startTour() {
+async function startTutorial() {
 
-    tourStep = 0
-    tourElt = showMessage("")
-    tourElt.classList.add("tour")
-    tourElt.onmessageclose = endTour
+    tutorialElt = document.createElement("div")
+    tutorialElt.classList.add("tutorial")
+    document.querySelector("#messages").appendChild(tutorialElt)
 
-    await updateTour()
-}
+    // prevent clicks on tutorial from toggling settings
+    tutorialElt.addEventListener("click", e => e.stopPropagation())
 
-async function updateTour() {
-    if (0 <= tourStep && tourStep < tourSteps.length) {
-        const step = tourSteps[tourStep]
-        updateMessage(tourElt, step.text)
-        if (step.latlon) {
-            const pos = {coords: {latitude: step.latlon[0], longitude: step.latlon[1], accuracy: 0}}
-            await moveLocationMarker(pos, true)
-        }
+    // watch for step to become newly visible and run its setup, if any
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && entry.target.tutorialSetup) {
+                print(entry.target.id, "became visible; running its setup")
+                entry.target.tutorialSetup()
+            }
+        })
+    })
+
+    // the tutorial div has a horizontal array of step divs of various heights
+    // we want the map to handle events outside of the step elements, but the tutorial element captures some of them
+    // so we catch events on the empty part of the tutorial container element
+    // and re-dispatch them to the map underneath
+    const eventNames = ["click", "touchstart", "touchend", "touchmove", "mousedown", "mouseup", "mousemove"]
+    for (const eventName of eventNames) {
+        tutorialElt.addEventListener(eventName, e => {
+            if (e.target == tutorialElt) {
+                const pos = e.changedTouches && e.changedTouches[0] || e.targetTouches && e.targetTouches[0] || e
+                const originalPointerEvents = tutorialElt.style.pointerEvents
+                try {
+                    tutorialElt.style.pointerEvents = "none";
+                    const underneath = document.elementFromPoint(pos.clientX, pos.clientY)
+                    const newEvent = new e.constructor(e.type, e)
+                    underneath.dispatchEvent(newEvent)
+                } finally {
+                    tutorialElt.style.pointerEvents = originalPointerEvents
+                }
+            }
+        })
     }
-}
 
-async function endTour() {
-    print("tourStep", tourStep, "tourSteps.length", tourSteps.length)
-    setAppState("didTour", true)
-    const msgElt = showMessage(`
-        Some final tips:
-        <br/><br/>
-        On an iPhone if you bookmark the app using the "Add to Home Screen" function,
-        when you start the app it will take over the entire screen,
-        giving you an experience more like a native app. 
-        <br/><br/>
-        The app is designed to run in portrait orientation,
-        so if your phone has an orientation sensor I suggest locking your phone orientation
-        while running the app.
-        <br/><br/>
-        Finally, you can rerun the tour any time from the ${btn('show-settings-button')} menu.
-    `)
-    msgElt.classList.add("tour")
-    msgElt.onmessageclose = () => window.location = "."
+    // redispatch scroll wheel events to map for zooming
+    const mapElt = document.querySelector("#map")
+    tutorialElt.addEventListener("wheel", e => {
+        if (e.deltaX == 0) {
+            const newEvent = new e.constructor(e.type, e)
+            mapElt.dispatchEvent(newEvent)
+            e.stopPropagation()
+        }
+    })
+
+    // generate a div for each step and add it to the tutorial div
+    var stepNumber = 0
+    for (const step of tutorialSteps) {
+        const stepElt = document.createElement("div")
+        stepElt.id = "tutorial-step-" + stepNumber++
+        stepElt.classList.add("message")
+        stepElt.innerHTML = `<div class='closer'></div>${step.text}`
+        stepElt.querySelector(".closer").addEventListener("click", endTutorial);
+        //stepElt.addEventListener("click", (e) => e.stopPropagation())
+        stepElt.tutorialSetup = step.setup
+        observer.observe(stepElt)
+        tutorialElt.appendChild(stepElt)
+        tutorialElt.onmessageclose = endTutorial
+    }
+
+    // run setup for first step early which sets lastPos which disables position watcher
+    // TODO: is there a better way to do this? this causes first tutorial step setup to be run twice.
+    print("running setup for tutorial step 0 to set lastPos")
+    tutorialSteps[0].setup()
 }
 
 async function didAction(name) {
-    if (tourStep >= 0) {
-        const step = tourSteps[tourStep]
-        if (step.waitFor == name) {
-            tourStep += 1
-            await updateTour()
-        }
+    print("didAction", name)
+    document.querySelectorAll(".action." + name).forEach(e => {
+        e.classList.add("completed")
+    })
+}
+
+function clearActions(...actions) {
+    for (const action of actions) {
+        document.querySelectorAll(".action." + action).forEach(e => {
+            e.classList.remove("completed")
+        })
     }
 }
 
-async function manageTour() {
+async function endTutorial() {
+    setAppState("didTutorial", true)
+    if (sawFinalMessage)
+        window.location = "."
+    else
+        tutorialElt.lastElementChild.scrollIntoView({behavior: "instant"})
+}
 
-    // return if not doing tour?
+async function manageTutorial() {
     const url = new URL(document.baseURI)
-    if (getAppState("didTour") && !url.searchParams.has("tour"))
-        return
-
-    // show tour box
-    //const mapElt = document.querySelector("#map")
-    //const tourElt = document.createElement("div")
-    //mapElt.appendChild(tourElt)
-
-    // kick it off
-    await startTour()
+    if (!getAppState("didTutorial") || url.searchParams.has("tutorial")) {
+        // load tutorial and start it
+        // do this synchronously to ensure startTutorial is done before we proceed
+        const tutorialScript = document.createElement("script")
+        tutorialScript.src = "tutorial.js"
+        const loaded = new Promise(resolve => tutorialScript.onload = resolve)
+        document.head.appendChild(tutorialScript)
+        await loaded
+        startTutorial()
+    }
 }
 
 
@@ -347,6 +302,16 @@ async function manageTour() {
 
 var theMap
 var keys
+var layerMaps
+var currentLayerNumber = 0
+
+function switchToLayer(layerNumber) {
+    theMap.removeLayer(layerMaps[currentLayerNumber])
+    currentLayerNumber = layerNumber
+    print("switching to layer", currentLayerNumber)
+    theMap.addLayer(layerMaps[currentLayerNumber])
+}
+
 
 async function manageMap(elt) {
 
@@ -405,7 +370,7 @@ async function manageMap(elt) {
     }
 
     // these will be presented in the layer switch control
-    const baseMaps = [
+    layerMaps = [
 
         OSM(),
         ESRI(),
@@ -424,16 +389,13 @@ async function manageMap(elt) {
         zoomControl: false,
         rotateControl: false,
     }).setZoom(selectCourseZoom)
-    //theMap.on("zoomend", () => print("zoom", theMap.getZoom()))
+    theMap.on("zoomstart", () => didAction("zoom"))
+    theMap.on("dragstart", () => didAction("pan"))
 
     // our own layer switcher
-    var currentLayerNumber = 0
-    theMap.addLayer(baseMaps[currentLayerNumber])
+    theMap.addLayer(layerMaps[currentLayerNumber])
     document.querySelector("#layer").addEventListener("click", () => {
-        theMap.removeLayer(baseMaps[currentLayerNumber])
-        currentLayerNumber = (currentLayerNumber + 1) % baseMaps.length
-        print("switching to layer", currentLayerNumber)
-        theMap.addLayer(baseMaps[currentLayerNumber])
+        switchToLayer((currentLayerNumber + 1) % layerMaps.length)
         didAction("layer")
     })
 
@@ -660,8 +622,8 @@ async function manageSettings() {
     })
 
     // help button
-    addSetting("Take the tour", () => {
-        setAppState("didTour", false)
+    addSetting("Tutorial", () => {
+        setAppState("didTutorial", false)
         window.location = "."
     })
 
@@ -702,7 +664,8 @@ async function loadHole(holeNumber) {
 
     print("loadHole", holeNumber)
 
-    // update tour
+    // update tutorial
+    didAction("loadHole")
     didAction("loadHole-" + holeNumber)
 
     // switch hole hole
@@ -786,7 +749,7 @@ function manageScorecard() {
         }
     })
 
-    // advance tour on scorecard scroll
+    // advance tutorial on scorecard scroll
     /*
     // alas not available on safari  
     document.querySelector("#score-row").addEventListener("scrollsnapchange", (e) => {
@@ -808,13 +771,14 @@ function manageScorecard() {
     // add or subtract one from score
     function updateScore(holeNumber, update) {
 
+        // advance tutorial
+        didAction(update > 0? "increaseScore" : "decreaseScore")
+
         // update hole score
         const td = document.querySelector(`#hole-score-${holeNumber}`)        
         const newScore = Number(td.innerText) + update
         td.innerText = newScore > 0? String(newScore) : " "
 
-        // advance tour
-        didAction("updateScore-" + newScore)
 
         // this assumes the "hole" feature is the first in the array of features for each hole
         // returns undefined if par is not available
@@ -909,7 +873,7 @@ async function updateLine() {
     try {
         pathLine.bringToFront()
     } catch (e) {
-        // TODO: in tour mode this fails initially - why?
+        // TODO: in tutorial mode this fails initially - why?
     }
 }
 
@@ -957,7 +921,7 @@ async function moveLocationMarker(pos, center) {
 // center the current location in the map and reset markers
 async function goToCurrentLocation(userAction = false) {
     
-    // advance tour
+    // advance tutorial
     if (userAction)
         didAction("goToCurrentLocation")
 
@@ -991,13 +955,15 @@ async function manageLocation() {
     if (!lastPos) {
         // watch for position changes, and update locationMarker accordingly
         // this does not center the locationMarker
-        lastPos = getPos()
-        print("watching for postion changes")
+        lastPos = await getPos()
+        print("watching for position changes")
         navigator.geolocation.watchPosition(
-            (pos) => moveLocationMarker(pos, false),
-            print,
-            {enableHighAccuracy: true, timeout: 1000}
+            async (pos) => moveLocationMarker(pos, false),
+            (e) => print("position watcher got error", e),
+            {enableHighAccuracy: true, timeout: 5000}
         )
+    } else {
+        print("lastPos already set so not watching for position changes")
     }
 
     // locate button moves map to current location
@@ -1026,7 +992,7 @@ async function manageLocation() {
             autoPanOnFocus: false, // https://github.com/Raruto/leaflet-rotate/issues/28
         }).addTo(theMap)
         pathMarkers.push(marker)
-        didAction("addMarker")
+        didAction("addMarker-" + pathMarkers.length)
 
         // redraw line and update distance info to include new marker
         updateLine()
@@ -1036,7 +1002,7 @@ async function manageLocation() {
             marker.remove()
             pathMarkers = pathMarkers.filter(m => m !== marker)
             updateLine()
-            didAction("removeMarker")
+            didAction("removeMarker-" + pathMarkers.length)
         })
 
         // dragging marker updates line
@@ -1049,7 +1015,6 @@ async function manageLocation() {
 
     // initial location
     await goToCurrentLocation()
-
 }
 
 
@@ -1143,15 +1108,28 @@ var loadedCourseName = null
 var loadedCourseHoleFeatures = []
 var selectCourseMarkerLayer
 
+// zoom is animated
+// in some cases if we don't wait for the animation to finish
+// subsequent steps don't behave as we expect
+async function waitForZoom(zoom) {
+    if (theMap.getZoom() != zoom) {
+        print("awaiting zoomend for zoom", zoom, "now", theMap.getZoom())
+        await new Promise((resolve, reject) => {theMap.on("zoomend", resolve)})
+        print("zoomend")
+    }
+}
+
 // load a course by name
 // sets loadedCourseName and loadedCOurseHoleFeatures
-async function loadCourse(name) {
+async function loadCourse(name, setView=true) {
 
-    // advance the tour
-    didAction("loadCourse-" + name)
+    // advance the tutorial
+    didAction("loadCourse-" + shorten(name))
 
     // clean slate
     resetScorecard()
+    resetPath()
+    theMap.setBearing(0)
 
     // get course data
     const latlon = knownCourses[name]
@@ -1192,8 +1170,11 @@ async function loadCourse(name) {
     }
 
     // show the course
-    print("setview", latlon)
-    theMap.setView(latlon, courseZoom)
+    if (setView) {
+        print("setview", latlon)
+        theMap.setView(latlon, courseZoom)
+        await waitForZoom(courseZoom)
+    }
 
     // no longer in course select mode
     selectCourseMarkerLayer.remove()
@@ -1211,7 +1192,7 @@ function unloadCourse() {
 // put up markers to select courses centered around current location
 async function selectCourse(userAction) {
 
-    // update tour
+    // update tutorial
     if (userAction)
         didAction("selectCourse")
 
@@ -1223,11 +1204,7 @@ async function selectCourse(userAction) {
     resetPath()
     theMap.setBearing(0)
     theMap.setZoom(selectCourseZoom)
-    if (theMap.getZoom() != selectCourseZoom) {
-        print("awaiting zoomend")
-        await new Promise((resolve, reject) => {theMap.on("zoomend", resolve)})
-        print("zoomend")
-    }
+    await waitForZoom(selectCourseZoom)
 
     // snap to tile boundaries
     const tileSize = 0.25 // needs to be power of 2
@@ -1260,7 +1237,7 @@ async function selectCourse(userAction) {
                     iconAnchor: [0, 0],
                 })
                 const marker = L.marker(latlon, {icon}).addTo(theMap).on("click", () => {
-                    loadCourse(courseName, latlon)
+                    loadCourse(courseName)
                 }).addTo(selectCourseMarkerLayer)
             }
         }
@@ -1292,9 +1269,11 @@ async function manageCourses()  {
     const selectCourseButton = document.querySelector("#select-course")
     selectCourseButton.addEventListener("click", () => selectCourse(true))
 
-    // this is our initial action
-    await selectCourse(false)
-    await loadNearbyCourse()
+    // this is our initial action unless in tutorial mode which handles initial state
+    if (!tutorialElt) {
+        await selectCourse(false)
+        await loadNearbyCourse()
+    }
 }
 
 
@@ -1320,8 +1299,8 @@ async function main() {
               <div id="console"></div>
           </div>
           <div id="score-row">
-              <table class="scorecard"><tr class="hole-number"><tr class="hole-score"></table>
-              <table class="scorecard"><tr class="hole-number"><tr class="hole-score"></table>
+              <table id="score-front" class="scorecard"><tr class="hole-number"><tr class="hole-score"></table>
+              <table id="score-back" class="scorecard"><tr class="hole-number"><tr class="hole-score"></table>
               <table id="score-total">
                   <tr class="total-heading">
                       <td colspan=2>out</td>
@@ -1345,7 +1324,7 @@ async function main() {
         await manageMap()
         await manageSettings()
         await manageScorecard()
-        await manageTour()
+        await manageTutorial()
         await manageLocation()
         await manageCourses()
     } catch (e) {

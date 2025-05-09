@@ -3,7 +3,7 @@ body {
     /* center if on wide display like desktop */
     margin: auto;
 
-    /* limit width for wide displays like desktop (for tour) */
+    /* limit width for wide displays like desktop (for tutorial) */
     width: 100vw;
     max-width: 500px;
 
@@ -22,9 +22,14 @@ body {
     container-type: size;
 }
 
+* {
+    --background: #003300;
+    --bright-green: #44ff44;
+    --mellow-yellow: #ffdd88;
+}
+
 #layout {
 
-    --background: #003300;
     background: var(--background);
     user-select: none;
 
@@ -117,7 +122,7 @@ body {
         }
         
         .hole-number td.selected {
-            background: #ffdd88;
+            background: var(--mellow-yellow);
             color: black;
         }
     }
@@ -205,7 +210,7 @@ body {
 }
 
 /* icon representing a course on the map */
-/* used both on map and in tour text */
+/* used both on map and in tutorial text */
 .course-icon {
 
     display: flex;
@@ -227,7 +232,7 @@ body {
     /*box-shadow: 2px 1px 3px rgba(0,0,0,0.2);*/
     border: 2px solid #aaaa00;
 
-    > div {
+    > * {
         text-align: center;
     }
 }
@@ -257,7 +262,7 @@ body {
     }
 
     a {
-        color: #ffdd88 !important;
+        color: var(--mellow-yellow) !important;
     }
 
     /* container of messages */
@@ -266,6 +271,7 @@ body {
         /* our position and behavior in parent */
         grid-column: 1 / 3;
         visibility: visible !important;
+        pointer-events: none;
 
         /* our layout as a container of messages */
         display: flex;
@@ -285,29 +291,87 @@ body {
                 float: right;
                 translate: 2cqw -0.6cqw;
                 background: url("icons/closer.svg");
+                pointer-events: auto;
             }
 
         }
 
-        /* tour is a persistent message */
-        .tour {
+        /* tutorial is a persistent message */
+        .tutorial {
 
-            /* tweak layout */
-            line-height: 145%;
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            gap: 10vw;
             margin-top: -1cqw;
+            pointer-events: auto;
 
-            /* buttons used as icons in tour text */
-            .tour-icon {
-                display: inline-flex;
-                width: 6cqw;
-                height: 6cqw;
-                vertical-align: middle;
+            /* allows box shadow to show */
+            /* TODO: parameterize? */
+            padding-right: 10px;
+            padding-bottom: 15px;
+
+            /* scroll horizontally but not vertically */
+            overflow-x: auto;
+            overflow-y: clip;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+
+            p {
+                margin-block-start: 0;
+                margin-block-end: 0;
+                & + p {
+                    margin-top: 3cqw;
+                }
+                &:has(.action) + &:has(.action) {
+                    margin-top: 0;
+                }
+                &:has(.action) {
+                    /* TODO: compute this from ... ? */
+                    text-indent: -5cqw;
+                    padding-left: 5cqw;
+                    * {
+                        text-indent: 0;
+                        padding-left: 0;
+                    }
+
+                }
             }
 
-            /* crosshair marker used as icon in tour text */
-            .crosshair-icon {
-                background-image: url('icons/crosshair-marker.svg');
-                background-size: 70%;
+            > * {
+
+                user-select: none;
+                scroll-snap-align: start;
+                flex: 0 0 100%;
+                box-sizing: border-box;
+                line-height: 145%;
+
+                /* buttons used as icons in tutorial text */
+                .tutorial-icon {
+                    display: inline-flex;
+                    width: 5cqw;
+                    height: 5cqw;
+                    vertical-align: middle;
+                }
+                
+                /* crosshair marker used as icon in tutorial text */
+                .crosshair-icon {
+                    background-image: url('icons/crosshair-marker.svg');
+                    background-size: 70%;
+                }
+
+                /* checkbox to show action completion */
+                .action {
+                    display: inline-block;
+                    width: 3cqw;
+                    height: 3cqw;
+                    margin-right: 0.5cqw;
+                    background: url(icons/triangle.svg);
+                    &.completed {
+                        background: url(icons/check.svg);
+                    }
+                }
             }
         }
     }

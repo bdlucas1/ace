@@ -36,19 +36,14 @@ const empty = turf.featureCollection([]);
 //
 // app state
 //
-const appStateVersion = 1;
 function setAppState(key, value) {
     var appState = JSON.parse(localStorage.getItem("appState") || "{}");
-    if (appState.version != appStateVersion)
-        appState = { version: appStateVersion };
     appState[key] = value;
     localStorage.setItem("appState", JSON.stringify(appState));
     log(`AppState(${key},${value}); state is now`, JSON.stringify(appState));
 }
 function getAppState(key) {
     var appState = JSON.parse(localStorage.getItem("appState") || "{}");
-    if (appState.version != appStateVersion)
-        appState = { version: appStateVersion };
     log(`getApppState(${key}); state is`, JSON.stringify(appState));
     return appState[key];
 }
@@ -1021,6 +1016,13 @@ function addHTML(html) {
     document.getElementById("layout").insertAdjacentHTML("beforeend", html);
 }
 async function main() {
+    // clear local storage if version has changed
+    const appStateVersion = 2;
+    if (getAppState("version") != appStateVersion) {
+        log("version changed; clearing local storage");
+        localStorage.clear();
+        setAppState("version", appStateVersion);
+    }
     // TODO: revisit and document the z-index, visibility, and pointer-events strategy
     // for settings, messages, tutorial, map
     document.body.innerHTML = "<div id='layout'></div>";

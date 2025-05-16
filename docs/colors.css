@@ -1,0 +1,19 @@
+/*
+ * Alas it doesn't work to @import this style sheet into our svg
+ * icons that are included as background images because such images
+ * must be self-contained so cannot load a stylesheet,
+ * for privacy reasons. So colors are baked into the svg files.
+ *
+ * TODO: look into the various alternatives.
+ */
+
+* {
+    --background: #003300;
+    --bright-green: #44ff44;
+    --mellow-yellow: #ffdd88;
+    --golf-tee: #777777;
+    --golf-fairway: #005000;
+    --golf-bunker: #cbc103;
+    --golf-green: #167461;
+    --path: #318bff; /* #6084eb */
+}

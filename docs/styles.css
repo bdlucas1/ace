@@ -1,3 +1,9 @@
+/* © 2025 Bruce D. Lucas https://github.com/bdlucas1 */
+/* SPDX-License-Identifier: AGPL-3.0 */
+
+
+@import url(colors.css);
+
 body {
 
     /* center if on wide display like desktop */
@@ -22,17 +28,12 @@ body {
     container-type: size;
 }
 
-* {
-    --background: #003300;
-    --bright-green: #44ff44;
-    --mellow-yellow: #ffdd88;
-}
-
 #layout {
 
     background: var(--background);
     user-select: none;
 
+    position: relative;
     height: 100%;
     width: 100%;
     padding: 0.8em;
@@ -49,7 +50,7 @@ body {
     #show-settings {grid-row: 1; grid-column: 1}
     #select-course {grid-row: 1; grid-column: 3;}
     #locate {grid-row: 1; grid-column: 4;}
-    #layer {grid-row: 1; grid-column: 5;}
+    #basemap {grid-row: 1; grid-column: 5;}
     #minus {grid-row: 1; grid-column: 7;}
     #plus {grid-row: 1; grid-column: 8;}
     #score-row {grid-row: 2; grid-column: 1 / -1;}
@@ -80,7 +81,7 @@ body {
 .show-settings-button {background-image: url('icons/hamburger.svg'); background-size: 60%;}
 .select-course-button {background-image: url('icons/golfer.png');  background-size: 60%;}
 .locate-button {background-image: url('icons/crosshair-button.png'); background-size: 90%;}
-.layer-button {background-image: url('icons/layers.svg'); background-size: 70%;}
+.basemap-button {background-image: url('icons/basemap.svg'); background-size: 70%;}
 .minus-button {background-image: url('icons/minus.svg'); background-size: 60%;}
 .plus-button {background-image: url('icons/plus.svg'); background-size: 60%;}
 
@@ -90,6 +91,7 @@ body {
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
+    scrollbar-width: none;
     gap: 2px;
 
     table {
@@ -132,60 +134,30 @@ body {
 
     z-index: 0;
 
-    .golf-hole    {stroke: #00000000;}
-    .golf-tee     {stroke: #777777; fill: #777777; fill-opacity: 0.2;}
-    .golf-fairway {stroke: #005000; fill: #005000; fill-opacity: 0.2;}
-    .golf-bunker  {stroke: #cbc103; fill: #cbc103; fill-opacity: 0.2;}
-    .golf-green   {stroke: #167461; fill: #167461; fill-opacity: 0.2;}
-
-    /* fallback - normally not visible */
-    /* default gray was better, I think - less distracting */
-    /*background: var(--background);*/
-
-    /* path from marker to marker */
-    --path-color: #318bff;
-    .path-line {
-        stroke: var(--path-color);
-    }
-
     /* this is for the crosshair marker used on the map */
-    .crosshair-marker {
+    .crosshair-marker, .path-marker {
+
+        aspect-ratio: 1 / 1;
+
+        width: 5.5cqw;
+        background-size: 100%;
 
         background-image: url('icons/crosshair-marker.svg');
-        background-size: 100%;
         background-position: center;
-        
-        width: 5.5cqw;
-        aspect-ratio: 1 / 1;
-        translate: -50% -50%;
-        
-        pointer-events: none !important;
-    }
-
-    /* circule indicating positional accuracy */
-    .accuracy {
-        stroke: var(--path-color);
-        stroke-opacity: 0.2;
-        fill: var(--path-color);
+        background-repeat: no-repeat;
     }
 
     /* blue circle marker along a path */
+    /* size is bigger than image for easier dragging */
     .path-marker {
-
-        /* svg is bigger than circle so it's easier to grab */
-        /* TODO: define variables and use calc */
-        width: 80px; height: 80px;
-        position: relative; top: -40px; left: -40px;        
-        circle {r: 10px; cx: 50%; cy: 50%;}
-
-        stroke-width: 3px;
-        stroke: var(--path-color);
-
-        fill: none;
+        width: 11cqw;
+        background-size: 50%;
+        background-image: url('icons/path-marker.svg');
     }
 
+
     /* info box */
-    .leaflet-tooltip {
+    .maplibregl-popup-content {
         font-family: sans-serif;
         font-size: 14px;
         padding: 0px;
@@ -196,17 +168,28 @@ body {
         border: 1px solid gray;
         border-radius: 5px;
         line-height: 1.2em;
-        &:before {display: none !important;} /* remove arrow */
+        user-select: none !important;
+        pointer-events: none !important;
+    }
+    .maplibregl-popup-content:empty {
+        display: none;
+    }
+    .maplibregl-popup-tip {
+        display: none !important;
     }
 
-    /* hack to avoid gaps between tiles at fractional scaling */
-    /* https://github.com/Leaflet/Leaflet/issues/3575 */
-    img.leaflet-tile {
-        mix-blend-mode: normal !important;  /* remove hack that seems to be built into leaflet */
-        width: 256.3px !important;          /* expand tiles slightly - this seems to be enough */
-        height: 256.3px !important;         /* but causes some very very slight artifacts at tile boundaries */
+    /* tweak attribution */
+    .maplibregl-ctrl-attrib {
+        margin: 5px;
+        background: #FFFFFFCC;
+        border: 1px solid #888888;
+        &:not(.maplibregl-compact-show) {
+            background: #88888833;
+        }
+        .maplibregl-ctrl-attrib-button:focus {
+            -webkit-box-shadow: none;
+        }
     }
-
 }
 
 /* icon representing a course on the map */
@@ -240,7 +223,6 @@ body {
 
 #settings {
 
-    z-index: 100;
     padding: 3cqw;
     padding-top: 5cqw;
 
@@ -250,6 +232,7 @@ body {
     grid-template-rows: repeat(4, max-content) max-content;
     grid-auto-flow: column;
     gap: 3cqw;
+    visibility: hidden;
 
     > #console, > .settings-button, .message {
         background: var(--background);
@@ -280,6 +263,9 @@ body {
 
         /* message style */
         .message {
+
+            /* show messages above map */
+            z-index: 100;
 
             color: white;
             font: 4cqw sans-serif;
@@ -340,6 +326,9 @@ body {
             }
 
             > * {
+
+                /* show step elements above map */
+                z-index: 100;
 
                 user-select: none;
                 scroll-snap-align: start;

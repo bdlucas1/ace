@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "target": "es2020",
+        "module": "es2022",
+        "strict": true,
+        "sourceMap": true,
+        "outDir": ".",
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true
+    },
+    "include": ["*.ts"],
+    "exclude": []
+}

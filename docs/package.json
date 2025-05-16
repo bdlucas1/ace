@@ -1,0 +1,13 @@
+{
+  "name": "maplibre-esm",
+  "type": "module",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@turf/turf": "^7.2.0",
+    "lerc": "^4.0.4",
+    "maplibre-gl": "^5.5.0",
+    "osmtogeojson": "^3.0.0-beta.5"
+  }
+}

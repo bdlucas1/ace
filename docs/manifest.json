@@ -1,0 +1,14 @@
+{
+    "name": "Ace",
+    "short_name": "Ace",
+    "start_url": "/",
+    "display": "fullscreen",
+    "orientation": "portrait",
+    "theme_color": "#000000",
+    "background_color": "#003300",
+    "icons": [{
+        "src": "/icons/ace.jpg",
+        "sizes": "1024x1024",
+        "type": "image/jpeg"
+    }]
+}

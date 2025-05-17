@@ -2,7 +2,7 @@
     "name": "Ace",
     "short_name": "Ace",
     "start_url": "/",
-    "display": "fullscreen",
+    "display": "standalone",
     "orientation": "portrait",
     "theme_color": "#000000",
     "background_color": "#003300",

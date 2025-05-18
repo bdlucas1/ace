@@ -1076,7 +1076,8 @@ class Courses {
     shorten(name: string) {
         var words = name.split(" ")
         words = words.filter(word => /^[A-Z]/.test(word))
-        words = words.filter(word => !["Golf", "Course", "Club", "Country", "Center"].includes(word))
+        const ignore = ["Golf", "Course", "Club", "Country", "Center", "Links", "The"]
+        words = words.filter(word => !ignore.includes(word))
         const short_name = words.map(word => word.slice(0, 1)).join("")
         return short_name
     }

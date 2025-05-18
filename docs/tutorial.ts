@@ -108,7 +108,7 @@ var tutorialSteps = [{
     },
     text: `
         <p>This course is shown on OpenStreetMap but it has  none of the course features.
-        Check the ${link(aboutPage, 'About')} page to get involved in improving the maps.</p>
+        Check the ${link(Settings.aboutPage, 'About')} page to get involved in improving the maps.</p>
 
         <p>However you can still use the app for this course with the aerial view.</p>
 
@@ -135,7 +135,7 @@ var tutorialSteps = [{
 }, {
     setup: () => Tutorial.the.sawFinalMessage = true,
     text: `
-        <p>For more information and tips see the ${link(aboutPage, 'About')} page.</p>
+        <p>For more information and tips see the ${link(Settings.aboutPage, 'About')} page.</p>
 
         <p>You can rerun the tutorial from the ${btn('show-settings-button')} menu.</p>
 

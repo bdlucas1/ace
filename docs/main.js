@@ -2,7 +2,6 @@
 // © 2025 Bruce D. Lucas https://github.com/bdlucas1
 // SPDX-License-Identifier: AGPL-3.0
 /// <reference path="tutorial.ts" />
-var aboutPage = "https://github.com/bdlucas1/ace/blob/main/README.md";
 ////////////////////////////////////////////////////////////
 //
 // logging
@@ -135,6 +134,9 @@ class GolfMap extends ml.Map {
         // singleton
         GolfMap.the = this;
     }
+    async init() {
+        await new Promise((resolve, reject) => this.on("load", resolve));
+    }
     switchToBasemap(i) {
         if (this.getLayer("basemap"))
             this.removeLayer("basemap");
@@ -145,10 +147,6 @@ class GolfMap extends ml.Map {
             source: Object.keys(this.basemaps)[i],
         }, firstLayerId);
         this.currentBasemap = i;
-    }
-    async init() {
-        await new Promise((resolve, reject) => this.on("load", resolve));
-        return this;
     }
 }
 GolfMap.holeZoom = 16;
@@ -280,6 +278,8 @@ class ScoreCard {
         // set up button click handlers for incr/decr hole score
         document.getElementById("plus").addEventListener("click", () => updateScore(this.loadedHoleNumber, +1));
         document.getElementById("minus").addEventListener("click", () => updateScore(this.loadedHoleNumber, -1));
+    }
+    async init() {
     }
     async loadHole(holeNumber) {
         log("loadHole", holeNumber);
@@ -461,6 +461,86 @@ class Path {
         // singleton
         Path.the = this;
     }
+    async init() {
+        // watch for position changes, or use fake position
+        const url = new URL(document.baseURI);
+        if (url.searchParams.has("testPos")) {
+            const [lat, lon] = url.searchParams.get("testPos").split(",");
+            this.fakeLocation([Number(lon), Number(lat)]);
+        }
+        if (!this.lastPos) {
+            // watch for position changes, and update locationMarker accordingly
+            // this does not center the locationMarker
+            this.lastPos = await this.getPos();
+            log("watching for position changes");
+            navigator.geolocation.watchPosition(async (pos) => this.moveLocationMarker(pos.coords), (e) => log("position watcher got error", e), { enableHighAccuracy: true, timeout: 5000 });
+        }
+        else {
+            log("lastPos already set so not watching for position changes");
+        }
+        // locate button moves map to current location
+        const locateButton = document.getElementById("locate");
+        locateButton.addEventListener("click", () => this.goToCurrentLocation(true));
+        // clicking on map adds a marker
+        GolfMap.the.on("click", e => {
+            if (this.ignoreClickHack) {
+                log("map click ignored");
+                return;
+            }
+            // don't do markers unless a course is loaded
+            // moving a marker at low zoom can cause enormouse number of elevation tile fetches
+            if (!Courses.the.loadedCourseName) {
+                log("no course loaded");
+                return;
+            }
+            // create marker and associated info box
+            const marker = divMarker("path-marker").setDraggable(true).setLngLat(e.lngLat).addTo(GolfMap.the);
+            this.pathMarkers.push(marker);
+            const popup = new ml.Popup({
+                anchor: "top", offset: 20,
+                closeOnClick: false, closeButton: false,
+            });
+            marker.setPopup(popup).togglePopup();
+            Tutorial.the.didAction("addMarker-" + this.pathMarkers.length);
+            // redraw line and update distance info to include new marker
+            this.updateLine();
+            // clicking marker removes it
+            // TODO: get rid of divIcon, use generated element directly
+            marker._element.addEventListener("click", (e) => {
+                if (this.ignoreClickHack) {
+                    log("marker click ignored");
+                    return;
+                }
+                marker.remove();
+                this.pathMarkers = this.pathMarkers.filter(m => m != marker);
+                this.updateLine();
+                e.stopPropagation();
+                Tutorial.the.didAction("removeMarker-" + this.pathMarkers.length);
+            });
+            // dragging marker updates line
+            // sometimes on iPhone this generates a spurious click event after dragging ends
+            // don't know why, or why iPhone-specific, but the ignoreClickHack fixes the problem
+            // TODO: look into whether there's a better way
+            var dragInProgress = false;
+            marker.on("drag", async () => {
+                if (dragInProgress)
+                    return;
+                dragInProgress = true;
+                try {
+                    await this.updateLine();
+                }
+                finally {
+                    dragInProgress = false;
+                }
+            });
+            marker.on("dragend", () => {
+                this.updateLine();
+                Tutorial.the.didAction("moveMarker");
+                this.ignoreClickHack = setTimeout(() => this.ignoreClickHack = 0, 500);
+            });
+        });
+        await this.goToCurrentLocation();
+    }
     async getPos() {
         if (this.lastPos) {
             // use last reported by watchPosition
@@ -557,86 +637,6 @@ class Path {
         this.lastPos = { latitude: ll[1], longitude: ll[0], accuracy: 100 };
         log("using fake location", this.lastPos);
     }
-    async init() {
-        // watch for position changes, or use fake position
-        const url = new URL(document.baseURI);
-        if (url.searchParams.has("testPos")) {
-            const [lat, lon] = url.searchParams.get("testPos").split(",");
-            this.fakeLocation([Number(lon), Number(lat)]);
-        }
-        if (!this.lastPos) {
-            // watch for position changes, and update locationMarker accordingly
-            // this does not center the locationMarker
-            this.lastPos = await this.getPos();
-            log("watching for position changes");
-            navigator.geolocation.watchPosition(async (pos) => this.moveLocationMarker(pos.coords), (e) => log("position watcher got error", e), { enableHighAccuracy: true, timeout: 5000 });
-        }
-        else {
-            log("lastPos already set so not watching for position changes");
-        }
-        // locate button moves map to current location
-        const locateButton = document.getElementById("locate");
-        locateButton.addEventListener("click", () => this.goToCurrentLocation(true));
-        // clicking on map adds a marker
-        GolfMap.the.on("click", e => {
-            if (this.ignoreClickHack) {
-                log("map click ignored");
-                return;
-            }
-            // don't do markers unless a course is loaded
-            // moving a marker at low zoom can cause enormouse number of elevation tile fetches
-            if (!Courses.the.loadedCourseName) {
-                log("no course loaded");
-                return;
-            }
-            // create marker and associated info box
-            const marker = divMarker("path-marker").setDraggable(true).setLngLat(e.lngLat).addTo(GolfMap.the);
-            this.pathMarkers.push(marker);
-            const popup = new ml.Popup({
-                anchor: "top", offset: 20,
-                closeOnClick: false, closeButton: false,
-            });
-            marker.setPopup(popup).togglePopup();
-            Tutorial.the.didAction("addMarker-" + this.pathMarkers.length);
-            // redraw line and update distance info to include new marker
-            this.updateLine();
-            // clicking marker removes it
-            // TODO: get rid of divIcon, use generated element directly
-            marker._element.addEventListener("click", (e) => {
-                if (this.ignoreClickHack) {
-                    log("marker click ignored");
-                    return;
-                }
-                marker.remove();
-                this.pathMarkers = this.pathMarkers.filter(m => m != marker);
-                this.updateLine();
-                e.stopPropagation();
-                Tutorial.the.didAction("removeMarker-" + this.pathMarkers.length);
-            });
-            // dragging marker updates line
-            // sometimes on iPhone this generates a spurious click event after dragging ends
-            // don't know why, or why iPhone-specific, but the ignoreClickHack fixes the problem
-            // TODO: look into whether there's a better way
-            var dragInProgress = false;
-            marker.on("drag", async () => {
-                if (dragInProgress)
-                    return;
-                dragInProgress = true;
-                try {
-                    await this.updateLine();
-                }
-                finally {
-                    dragInProgress = false;
-                }
-            });
-            marker.on("dragend", () => {
-                this.updateLine();
-                Tutorial.the.didAction("moveMarker");
-                this.ignoreClickHack = setTimeout(() => this.ignoreClickHack = 0, 500);
-            });
-        });
-        await this.goToCurrentLocation();
-    }
 }
 ////////////////////////////////////////////////////////////
 //
@@ -667,78 +667,83 @@ function removeMessage(msgElt) {
     if (msgElt.onmessageclose)
         msgElt.onmessageclose(msgElt);
 }
-function manageSettings() {
-    /* settings screen and button to show settings screen */
-    addHTML(`
-        <div id="show-settings" class="main-button show-settings-button"></div>
-        <div id="settings">
-        <div id="messages"></div>
-        <div id="console"></div>
-        </div>
-    `);
-    // set up settings menu
-    const settingsElt = document.querySelector("#settings");
-    const consoleElt = document.getElementById("console");
-    function addSetting(text, action) {
-        const itemElt = document.createElement("div");
-        itemElt.innerText = text;
-        itemElt.classList.add("settings-button");
-        settingsElt.insertBefore(itemElt, consoleElt);
-        itemElt.addEventListener("click", action);
-        // closing is handled by event propagationg to settingsElt
+class Settings {
+    constructor() {
+        /* settings screen and button to show settings screen */
+        addHTML(`
+            <div id="show-settings" class="main-button show-settings-button"></div>
+            <div id="settings">
+            <div id="messages"></div>
+            <div id="console"></div>
+            </div>
+        `);
+        // set up settings menu
+        const settingsElt = document.querySelector("#settings");
+        const consoleElt = document.getElementById("console");
+        function addSetting(text, action) {
+            const itemElt = document.createElement("div");
+            itemElt.innerText = text;
+            itemElt.classList.add("settings-button");
+            settingsElt.insertBefore(itemElt, consoleElt);
+            itemElt.addEventListener("click", action);
+            // closing is handled by event propagationg to settingsElt
+        }
+        // console collapse/expand
+        consoleElt.addEventListener("click", (e) => {
+            if (consoleElt.classList.contains("collapsed")) {
+                consoleElt.classList.remove("collapsed");
+                consoleElt.scrollTo(0, consoleElt.scrollHeight);
+            }
+            else {
+                consoleElt.classList.add("collapsed");
+            }
+            e.stopPropagation();
+        });
+        consoleElt.classList.add("collapsed");
+        // About info
+        addSetting("About", () => {
+            window.location.href = Settings.aboutPage;
+        });
+        // help button
+        addSetting("Tutorial", () => {
+            setAppState("didTutorial", false);
+            window.location.href = ".";
+        });
+        // clear course data button
+        addSetting("Refresh course data", () => {
+            log("clearing local storage");
+            localStorage.clear();
+        });
+        // manage settings menu display
+        var showing = false;
+        const toggleSettings = () => {
+            showing = !showing;
+            if (showing) {
+                settingsElt.style.visibility = "visible";
+                settingsElt.style.zIndex = "200";
+                // TODO: is there a less intrusive way of doing this?
+                if (Tutorial.the.tutorialElt)
+                    Tutorial.the.tutorialElt.style.pointerEvents = "none";
+            }
+            else {
+                settingsElt.style.visibility = "hidden";
+                settingsElt.style.zIndex = "unset";
+                if (Tutorial.the.tutorialElt)
+                    Tutorial.the.tutorialElt.style.pointerEvents = "auto";
+            }
+        };
+        // set up show-settings button
+        const settingsButton = document.getElementById("show-settings");
+        settingsButton.addEventListener("click", toggleSettings);
+        settingsElt.addEventListener("click", toggleSettings);
+        // for testing
+        //showMessage("message 1", 3000)
+        //showMessage("message 2", 5000)
     }
-    // console collapse/expand
-    consoleElt.addEventListener("click", (e) => {
-        if (consoleElt.classList.contains("collapsed")) {
-            consoleElt.classList.remove("collapsed");
-            consoleElt.scrollTo(0, consoleElt.scrollHeight);
-        }
-        else {
-            consoleElt.classList.add("collapsed");
-        }
-        e.stopPropagation();
-    });
-    consoleElt.classList.add("collapsed");
-    // About info
-    addSetting("About", () => {
-        window.location.href = aboutPage;
-    });
-    // help button
-    addSetting("Tutorial", () => {
-        setAppState("didTutorial", false);
-        window.location.href = ".";
-    });
-    // clear course data button
-    addSetting("Refresh course data", () => {
-        log("clearing local storage");
-        localStorage.clear();
-    });
-    // manage settings menu display
-    var showing = false;
-    const toggleSettings = () => {
-        showing = !showing;
-        if (showing) {
-            settingsElt.style.visibility = "visible";
-            settingsElt.style.zIndex = "200";
-            // TODO: is there a less intrusive way of doing this?
-            if (Tutorial.the.tutorialElt)
-                Tutorial.the.tutorialElt.style.pointerEvents = "none";
-        }
-        else {
-            settingsElt.style.visibility = "hidden";
-            settingsElt.style.zIndex = "unset";
-            if (Tutorial.the.tutorialElt)
-                Tutorial.the.tutorialElt.style.pointerEvents = "auto";
-        }
-    };
-    // set up show-settings button
-    const settingsButton = document.getElementById("show-settings");
-    settingsButton.addEventListener("click", toggleSettings);
-    settingsElt.addEventListener("click", toggleSettings);
-    // for testing
-    //showMessage("message 1", 3000)
-    //showMessage("message 2", 5000)
+    async init() {
+    }
 }
+Settings.aboutPage = "https://github.com/bdlucas1/ace/blob/main/README.md";
 ////////////////////////////////////////////////////////////
 //
 // queries
@@ -1026,20 +1031,12 @@ async function main() {
     // TODO: revisit and document the z-index, visibility, and pointer-events strategy
     // for settings, messages, tutorial, map
     document.body.innerHTML = "<div id='layout'></div>";
-    // this was supposed to exclude Android navigation bar, solving the problem with
-    // css dvh, but it didn't seem to, so sticking with css
-    //document.body.style.height = `${window.innerHeight}px`
     try {
-        // TODO: regularize all the below
-        await new GolfMap().init();
-        manageSettings(); // TODO class
-        new ScoreCard(); // TODO init()
-        const t = new Tutorial();
-        const p = new Path();
-        const c = new Courses();
-        await t.init();
-        await p.init();
-        await c.init();
+        // construct components and the init them
+        const classes = [GolfMap, Settings, ScoreCard, Tutorial, Path, Courses];
+        const objects = classes.map(cls => new cls());
+        for (const obj of objects)
+            await obj.init();
     }
     catch (e) {
         if (e.message)

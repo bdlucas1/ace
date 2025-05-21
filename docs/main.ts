@@ -197,6 +197,7 @@ class GolfMap extends ml.Map {
 
     async init() {
         await new Promise((resolve, reject) => this.on("load", resolve))
+        this.resize()
     }
 
     switchToBasemap(i: number) {
@@ -401,17 +402,22 @@ class ScoreCard {
 
             // we have hole info - zoom in on it
 
-            // compute bearing from start to end of hole
-            const coordinates = holeInfo?.hole.geometry.coordinates
-            const bearing = coordinates? turf.bearing(coordinates[0], coordinates[coordinates.length - 1]) : 0
-        
             // select and show hole features
             const data = turf.featureCollection(holeInfo.features)
             this.golfHoleFeatures.setData(data)
 
-            // center hole on map
+            // center hole on map, zoom in, and rotate bearing to align with hole
+            // zoomAdjust pulls the zoom out a bit for breathing room around the edges;
+            // allow more if in tutorial because of the tutorial message box
+            // fitBounds doesn't do the zoom correctly for bearing not 0, so we compute zoom explicitly
+            const coordinates = holeInfo?.hole.geometry.coordinates
+            const bearing = coordinates? turf.bearing(coordinates[0], coordinates[coordinates.length - 1]) : 0
             const center = turf.center(data).geometry.coordinates as LL
-            GolfMap.the.easeTo({center, bearing, zoom: GolfMap.holeZoom})
+            const rotated = turf.transformRotate(data, -bearing)
+            const rotatedBbox = turf.bbox(rotated) as [number, number, number, number]
+            const zoomAdjust = Tutorial.the.inProgress? 1 : 0.3
+            const zoom = GolfMap.the.cameraForBounds(rotatedBbox)!.zoom! - zoomAdjust
+            GolfMap.the.easeTo({zoom, center, bearing})
             Path.the.reset()
         }
     }

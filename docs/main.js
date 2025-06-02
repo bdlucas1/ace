@@ -409,7 +409,7 @@ class Tutorial {
         tutorialSteps[0].setup?.();
     }
     async didAction(name) {
-        log("didAction", name);
+        //log("didAction", name)
         document.querySelectorAll(".action." + name).forEach(e => {
             e.classList.add("completed");
         });
@@ -777,9 +777,9 @@ async function query(query) {
         return [];
     }
 }
-async function cacheJSON(key, fun) {
+async function cacheJSON(key, fun, noCache = false) {
     const value = localStorage.getItem(key);
-    if (value) {
+    if (value && !noCache) {
         log("using cached data for", key);
         return JSON.parse(value);
     }
@@ -798,6 +798,7 @@ class Courses {
         this.courseMarkers = [];
         this.loadedCourseName = null;
         this.loadedHoleInfo = new Map();
+        this.courseNumber = 1; // for courses without names
         addHTML("<div class='main-button select-course-button' id='select-course'></div>");
         const selectCourseButton = document.getElementById("select-course");
         selectCourseButton.addEventListener("click", () => this.selectCourse(true));
@@ -830,8 +831,9 @@ class Courses {
             way[golf="bunker"](around:${distance},${lat},${lon});
             way[golf="green"](around:${distance},${lat},${lon});
             way[golf="driving_range"](around:${distance},${lat},${lon});
-            way[name="${name}"]; // this picks up course boundaries
+            nwr[name="${name}"]; // this picks up course boundaries; nwr gets multi-polygons
         );`;
+        log("xxx featuresQuery", featuresQuery);
         const features = await query(featuresQuery);
         // check if a feature is actually on the course and is a feature type we're interested in
         const courseBounds = features.filter((f) => f?.properties?.name == name)[0];
@@ -863,24 +865,32 @@ class Courses {
     // take the initials of relevant words to display in the course icon on the map
     shorten(name) {
         var words = name.split(" ");
-        words = words.filter(word => /^[A-Z]/.test(word));
+        words = words.filter(word => /^[A-Z0-9]/.test(word));
         const ignore = ["Golf", "Course", "Club", "Country", "Center", "Links", "The"];
         words = words.filter(word => !ignore.includes(word));
-        const short_name = words.map(word => word.slice(0, 1)).join("");
+        const short_name = words.map(word => /^[0-9]/.test(word) ? word : word.slice(0, 1)).join("");
         return short_name;
     }
     // find golf courses within the given lat/lon bounds
     async queryCourses(south, west, north, east) {
-        const q = `way[leisure=golf_course](${south},${west},${north},${east});`;
+        const q = `nwr[leisure=golf_course](${south},${west},${north},${east});`;
         const courses = await query(q);
         const result = {};
         for (const course of courses) {
             const center = turf.centroid(course);
             const [lon, lat] = center.geometry.coordinates;
-            if (course.properties?.name) {
-                course.properties.short_name = this.shorten(course.properties.name);
-                result[course.properties.name] = [lon, lat];
+            log(`${course.id} / ${course.properties?.name} / ${lon.toFixed(4)},${lat.toFixed(4)}`);
+            if (!course.properties?.name) {
+                const name = String(this.courseNumber);
+                log(`using "${name}" for course without name`, course);
+                if (course.properties)
+                    course.properties.name = name;
+                else
+                    course.properties = { name };
+                this.courseNumber += 1;
             }
+            course.properties.short_name = this.shorten(course.properties.name);
+            result[course.properties.name] = [lon, lat];
         }
         return result;
     }

@@ -424,7 +424,7 @@ class Tutorial {
     async endTutorial() {
         setAppState("didTutorial", true);
         if (this.sawFinalMessage)
-            window.location.href = ".";
+            window.location.href = "." + window.location.search;
         else
             this.tutorialElt.lastElementChild.scrollIntoView({ behavior: "instant" });
     }
@@ -797,7 +797,6 @@ class Courses {
         this.courseMarkers = [];
         this.loadedCourseName = null;
         this.loadedHoleInfo = new Map();
-        this.courseNumber = 1; // for courses without names
         addHTML("<div class='main-button select-course-button' id='select-course'></div>");
         const selectCourseButton = document.getElementById("select-course");
         selectCourseButton.addEventListener("click", () => this.selectCourse(true));
@@ -810,9 +809,8 @@ class Courses {
             await this.loadNearbyCourse();
         }
     }
-    async queryCourseFeatures(name) {
-        const id = this.knownCourses[name].id.split("/")[1];
-        const [lon, lat] = this.knownCourses[name].ll;
+    async queryCourseFeatures(id) {
+        const [lon, lat] = this.knownCourses[id].ll;
         // query language doesn't support querying for features within a polygon
         // so instead query for all features within a certain distance, then filter
         //
@@ -831,11 +829,11 @@ class Courses {
             way[golf="bunker"](around:${distance},${lat},${lon});
             way[golf="green"](around:${distance},${lat},${lon});
             way[golf="driving_range"](around:${distance},${lat},${lon});
-            nwr(${id}); // this picks up course boundaries; nwr gets multi-polygons
+            nwr(${id.split("/")[1]}); // this picks up course boundaries; nwr gets multi-polygons
         );`;
         const features = await query(featuresQuery);
         // check if a feature is actually on the course and is a feature type we're interested in
-        const courseBounds = features.filter((f) => f?.properties?.name == name)[0];
+        const courseBounds = features.filter((f) => f.id == id)[0];
         function onCourse(f) {
             if (f?.properties?.leisure == "golf_course" || f?.properties?.golf == "driving_range") {
                 // don't want the course bounds in this feature list
@@ -878,21 +876,18 @@ class Courses {
         for (const course of courses) {
             const center = turf.centroid(course);
             const [lon, lat] = center.geometry.coordinates;
-            log(`${course.id} / ${course.properties?.name} / ${lon.toFixed(4)},${lat.toFixed(4)}`);
-            var name = course.properties?.name;
-            if (!name) {
-                name = String(this.courseNumber);
-                log(`using "${name}" for course without name`, course);
-                this.courseNumber += 1;
-            }
-            result[name] = { id: String(course.id), ll: [lon, lat] };
+            const id = course.id;
+            var name = course.properties?.name || "";
+            log(`${id} / ${name || "UNNAMED"} / ${lon.toFixed(4)},${lat.toFixed(4)}`);
+            result[id] = { name, ll: [lon, lat] };
         }
         return result;
     }
     // load a course by name
     // sets loadedCourseName and loadedCOurseHoleFeatures
-    async loadCourse(name, setView = true) {
+    async loadCourse(id, setView = true) {
         // advance the tutorial
+        const name = this.knownCourses[id].name;
         Tutorial.the.didAction("loadCourse-" + this.shorten(name));
         // already loaded?
         if (this.loadedCourseName == name)
@@ -902,8 +897,8 @@ class Courses {
         Path.the.reset();
         GolfMap.the.setBearing(0);
         // get course data
-        const ll = this.knownCourses[name].ll;
-        const queryCourse = async () => await this.queryCourseFeatures(name);
+        const ll = this.knownCourses[id].ll;
+        const queryCourse = async () => await this.queryCourseFeatures(id);
         const courseFeatures = await cacheJSON(name, queryCourse);
         // group features by nearest hole into loadedHoleInfo
         // which is a Map from hole number to HoleInfo
@@ -986,15 +981,15 @@ class Courses {
                 const e = w + tileSize;
                 const key = s + "," + w + "," + n + "," + e;
                 const courses = await cacheJSON(key, () => this.queryCourses(s, w, n, e));
-                for (const [courseName, { id, ll }] of Object.entries(courses)) {
-                    this.knownCourses[courseName] = { id, ll };
+                for (const [id, { name, ll }] of Object.entries(courses)) {
+                    this.knownCourses[id] = { name, ll };
                     const element = document.createElement("div");
-                    var shortName = this.shorten(courseName);
+                    var shortName = this.shorten(name);
                     if (shortName.length > 2)
                         shortName = shortName.slice(0, 2) + "<br/>" + shortName.slice(2);
                     element.innerHTML = `<div>${shortName}</div>`;
                     element.addEventListener("click", (e) => {
-                        this.loadCourse(courseName);
+                        this.loadCourse(id);
                         e.stopPropagation();
                     });
                     const marker = new ml.Marker({ element, anchor: "center", className: "course-icon" });
@@ -1006,18 +1001,16 @@ class Courses {
     }
     // are we within 1000 m of a course centroid?
     // TODO: use actual course bounds?
-    atCourse(pos, name, distance = 1000) {
-        if (!name)
-            return false;
-        const ll = this.knownCourses[name].ll;
+    atCourse(pos, id, distance = 1000) {
+        const ll = this.knownCourses[id].ll;
         return turf.distance(pos2ll(pos), ll, { units: "meters" }) < distance;
     }
     // if we're at a course load it
     async loadNearbyCourse() {
         const pos = await Path.the.getPos();
-        for (const name in this.knownCourses) {
-            if (this.atCourse(pos, name)) {
-                await this.loadCourse(name);
+        for (const id in this.knownCourses) {
+            if (this.atCourse(pos, id)) {
+                await this.loadCourse(id);
                 return;
             }
         }
@@ -1035,7 +1028,7 @@ function addHTML(html) {
 }
 async function main() {
     // clear local storage if version has changed
-    const appStateVersion = 3;
+    const appStateVersion = 4;
     if (getAppState("version") != appStateVersion) {
         log("version changed; clearing local storage");
         localStorage.clear();

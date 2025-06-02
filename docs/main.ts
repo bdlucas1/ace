@@ -962,14 +962,14 @@ async function query(query: string): Promise<GeoJSON.Feature[]> {
     `
     const api = "https://overpass-api.de/api/interpreter"
     const response = await fetch(api, {method: "POST", body: fullQuery,})
-    try {
-        const responseJSON = await response.json()
-        const geojson = osmtogeojson(responseJSON)
-        return geojson.features
-    } catch(e) {
-        log(e)
-        return [] 
+    if (!response.ok) {
+        log("error", response)
+        log(await response.text())
+        throw "query error"
     }
+    const responseJSON = await response.json()
+    const geojson = osmtogeojson(responseJSON)
+    return geojson.features
 }
 
 async function cacheJSON<T>(key: string, fun: () => Promise<T>, noCache=false) {
@@ -998,11 +998,16 @@ type HoleInfo = {
     features: GeoJSON.Feature[]
 }
 
+type KnownCourse = {
+    id: string
+    ll: LL
+}
+
 class Courses {
 
     static the: Courses
 
-    knownCourses: {[_: string]: LL} = {}
+    knownCourses: {[name: string]: KnownCourse} = {}
     courseMarkers: ml.Marker[] = []
     loadedCourseName: string | null = null
     loadedHoleInfo: Map<number, HoleInfo> = new Map()
@@ -1024,9 +1029,10 @@ class Courses {
         }
     }
 
-    async queryCourseFeatures(name: string, ll: LL) {
+    async queryCourseFeatures(name: string) {
 
-        const [lon, lat] = ll
+        const id = this.knownCourses[name].id.split("/")[1]
+        const [lon, lat] = this.knownCourses[name].ll
 
         // query language doesn't support querying for features within a polygon
         // so instead query for all features within a certain distance, then filter
@@ -1046,9 +1052,8 @@ class Courses {
             way[golf="bunker"](around:${distance},${lat},${lon});
             way[golf="green"](around:${distance},${lat},${lon});
             way[golf="driving_range"](around:${distance},${lat},${lon});
-            nwr[name="${name}"]; // this picks up course boundaries; nwr gets multi-polygons
+            nwr(${id}); // this picks up course boundaries; nwr gets multi-polygons
         );`
-        log("xxx featuresQuery", featuresQuery)
         const features = await query(featuresQuery)
 
         // check if a feature is actually on the course and is a feature type we're interested in
@@ -1093,22 +1098,18 @@ class Courses {
     async queryCourses(south: number, west: number, north: number, east: number) {
         const q = `nwr[leisure=golf_course](${south},${west},${north},${east});`
         const courses = await query(q)
-        const result: {[_: string]: LL} = {}
+        const result: {[name: string]: KnownCourse} = {}
         for (const course of courses) {
             const center = turf.centroid(course)
             const [lon, lat] = center.geometry.coordinates
             log(`${course.id} / ${course.properties?.name} / ${lon.toFixed(4)},${lat.toFixed(4)}`)
-            if (!course.properties?.name) {
-                const name = String(this.courseNumber)
+            var name = course.properties?.name
+            if (!name) {
+                name = String(this.courseNumber)
                 log(`using "${name}" for course without name`, course)
-                if (course.properties)
-                    course.properties.name = name
-                else
-                    course.properties = {name}
                 this.courseNumber += 1
             }
-            course.properties.short_name = this.shorten(course.properties.name)
-            result[course.properties.name] = [lon, lat]
+            result[name] = {id: String(course.id), ll: [lon, lat]}
         }
         return result
     }
@@ -1130,8 +1131,8 @@ class Courses {
         GolfMap.the.setBearing(0)
 
         // get course data
-        const ll = this.knownCourses[name]!
-        const queryCourse = async () => await this.queryCourseFeatures(name, ll)
+        const ll = this.knownCourses[name].ll
+        const queryCourse = async () => await this.queryCourseFeatures(name)
         const courseFeatures = await cacheJSON<GeoJSON.Feature[]>(name, queryCourse)
 
         // group features by nearest hole into loadedHoleInfo
@@ -1227,8 +1228,8 @@ class Courses {
                 const e = w + tileSize
                 const key = s + "," + w + "," + n + "," + e
                 const courses = await cacheJSON(key, () => this.queryCourses(s, w, n, e))
-                for (const [courseName, ll] of Object.entries(courses)) {
-                    this.knownCourses[courseName] = ll
+                for (const [courseName, {id, ll}] of Object.entries(courses)) {
+                    this.knownCourses[courseName] = {id, ll}
                     const element = document.createElement("div")
                     var shortName = this.shorten(courseName)
                     if (shortName.length > 2)
@@ -1251,7 +1252,7 @@ class Courses {
     atCourse(pos: Pos, name: string, distance = 1000) {
         if (!name)
             return false
-        const ll = this.knownCourses[name]!
+        const ll = this.knownCourses[name]!.ll
         return turf.distance(pos2ll(pos), ll, {units: "meters"}) < distance
     }
 
@@ -1283,7 +1284,7 @@ function addHTML(html: string) {
 async function main() {
 
     // clear local storage if version has changed
-    const appStateVersion = 2
+    const appStateVersion = 3
     if (getAppState("version") != appStateVersion) {
         log("version changed; clearing local storage")
         localStorage.clear()

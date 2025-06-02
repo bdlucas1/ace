@@ -767,15 +767,14 @@ async function query(query) {
     `;
     const api = "https://overpass-api.de/api/interpreter";
     const response = await fetch(api, { method: "POST", body: fullQuery, });
-    try {
-        const responseJSON = await response.json();
-        const geojson = osmtogeojson(responseJSON);
-        return geojson.features;
+    if (!response.ok) {
+        log("error", response);
+        log(await response.text());
+        throw "query error";
     }
-    catch (e) {
-        log(e);
-        return [];
-    }
+    const responseJSON = await response.json();
+    const geojson = osmtogeojson(responseJSON);
+    return geojson.features;
 }
 async function cacheJSON(key, fun, noCache = false) {
     const value = localStorage.getItem(key);
@@ -811,8 +810,9 @@ class Courses {
             await this.loadNearbyCourse();
         }
     }
-    async queryCourseFeatures(name, ll) {
-        const [lon, lat] = ll;
+    async queryCourseFeatures(name) {
+        const id = this.knownCourses[name].id.split("/")[1];
+        const [lon, lat] = this.knownCourses[name].ll;
         // query language doesn't support querying for features within a polygon
         // so instead query for all features within a certain distance, then filter
         //
@@ -831,9 +831,8 @@ class Courses {
             way[golf="bunker"](around:${distance},${lat},${lon});
             way[golf="green"](around:${distance},${lat},${lon});
             way[golf="driving_range"](around:${distance},${lat},${lon});
-            nwr[name="${name}"]; // this picks up course boundaries; nwr gets multi-polygons
+            nwr(${id}); // this picks up course boundaries; nwr gets multi-polygons
         );`;
-        log("xxx featuresQuery", featuresQuery);
         const features = await query(featuresQuery);
         // check if a feature is actually on the course and is a feature type we're interested in
         const courseBounds = features.filter((f) => f?.properties?.name == name)[0];
@@ -880,17 +879,13 @@ class Courses {
             const center = turf.centroid(course);
             const [lon, lat] = center.geometry.coordinates;
             log(`${course.id} / ${course.properties?.name} / ${lon.toFixed(4)},${lat.toFixed(4)}`);
-            if (!course.properties?.name) {
-                const name = String(this.courseNumber);
+            var name = course.properties?.name;
+            if (!name) {
+                name = String(this.courseNumber);
                 log(`using "${name}" for course without name`, course);
-                if (course.properties)
-                    course.properties.name = name;
-                else
-                    course.properties = { name };
                 this.courseNumber += 1;
             }
-            course.properties.short_name = this.shorten(course.properties.name);
-            result[course.properties.name] = [lon, lat];
+            result[name] = { id: String(course.id), ll: [lon, lat] };
         }
         return result;
     }
@@ -907,8 +902,8 @@ class Courses {
         Path.the.reset();
         GolfMap.the.setBearing(0);
         // get course data
-        const ll = this.knownCourses[name];
-        const queryCourse = async () => await this.queryCourseFeatures(name, ll);
+        const ll = this.knownCourses[name].ll;
+        const queryCourse = async () => await this.queryCourseFeatures(name);
         const courseFeatures = await cacheJSON(name, queryCourse);
         // group features by nearest hole into loadedHoleInfo
         // which is a Map from hole number to HoleInfo
@@ -991,8 +986,8 @@ class Courses {
                 const e = w + tileSize;
                 const key = s + "," + w + "," + n + "," + e;
                 const courses = await cacheJSON(key, () => this.queryCourses(s, w, n, e));
-                for (const [courseName, ll] of Object.entries(courses)) {
-                    this.knownCourses[courseName] = ll;
+                for (const [courseName, { id, ll }] of Object.entries(courses)) {
+                    this.knownCourses[courseName] = { id, ll };
                     const element = document.createElement("div");
                     var shortName = this.shorten(courseName);
                     if (shortName.length > 2)
@@ -1014,7 +1009,7 @@ class Courses {
     atCourse(pos, name, distance = 1000) {
         if (!name)
             return false;
-        const ll = this.knownCourses[name];
+        const ll = this.knownCourses[name].ll;
         return turf.distance(pos2ll(pos), ll, { units: "meters" }) < distance;
     }
     // if we're at a course load it
@@ -1040,7 +1035,7 @@ function addHTML(html) {
 }
 async function main() {
     // clear local storage if version has changed
-    const appStateVersion = 2;
+    const appStateVersion = 3;
     if (getAppState("version") != appStateVersion) {
         log("version changed; clearing local storage");
         localStorage.clear();

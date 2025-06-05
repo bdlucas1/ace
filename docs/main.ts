@@ -1154,7 +1154,7 @@ class Courses {
         for (const feature of courseFeatures) {
             if (feature.properties?.golf != "hole") {
                 const centroid = turf.centroid(feature)
-                var minDistance = Infinity
+                var minDistance = 0.100 // only include features within 100m of hole line
                 var closestHoleInfo: HoleInfo | undefined = undefined
                 for (const holeInfo of this.loadedHoleInfo.values()) {
                     const distance = turf.pointToLineDistance(centroid, holeInfo.hole)

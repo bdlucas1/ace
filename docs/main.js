@@ -877,7 +877,7 @@ class Courses {
             const center = turf.centroid(course);
             const [lon, lat] = center.geometry.coordinates;
             const id = course.id;
-            var name = course.properties?.name || "";
+            const name = course.properties?.name || "";
             log(`${id} / ${name || "UNNAMED"} / ${lon.toFixed(4)},${lat.toFixed(4)}`);
             result[id] = { name, ll: [lon, lat] };
         }
@@ -922,7 +922,7 @@ class Courses {
         for (const feature of courseFeatures) {
             if (feature.properties?.golf != "hole") {
                 const centroid = turf.centroid(feature);
-                var minDistance = Infinity;
+                var minDistance = 0.100; // only include features within 100m of hole line
                 var closestHoleInfo = undefined;
                 for (const holeInfo of this.loadedHoleInfo.values()) {
                     const distance = turf.pointToLineDistance(centroid, holeInfo.hole);

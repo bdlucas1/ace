@@ -239,43 +239,16 @@ class ScoreCard {
             Tutorial.the.didAction("scrollTo-" + lastVisibleId);
         });
         // add or subtract one from score
-        function updateScore(holeNumber, update) {
+        const updateScore = (holeNumber, update) => {
             // advance tutorial
             Tutorial.the.didAction(update > 0 ? "increaseScore" : "decreaseScore");
             // update hole score
             const td = document.getElementById(`hole-score-${holeNumber}`);
             const newScore = Number(td.innerText) + update;
             td.innerText = newScore > 0 ? String(newScore) : " ";
-            // this assumes the "hole" feature is the first in the array of features for each hole
-            // returns undefined if par is not available
-            const parFor = (holeNumber) => {
-                const holeInfo = Courses.the.loadedHoleInfo.get(holeNumber);
-                return holeInfo?.hole.properties?.par;
-            };
-            // update total score and total to par
-            // toPar becomes NaN if par is unavailable for any hole,
-            // which causes fmtPar to return blank
-            function computeScore(start) {
-                for (var holeNumber = start, total = 0, toPar = 0, i = 0; i < 9; i++, holeNumber++) {
-                    const score = Number(document.getElementById(`hole-score-${holeNumber}`).innerText);
-                    total += score;
-                    if (score > 0)
-                        toPar += score - parFor(holeNumber);
-                }
-                return [total, toPar];
-            }
-            const [outTotal, outToPar] = computeScore(1);
-            const [inTotal, inToPar] = computeScore(10);
-            const total = outTotal + inTotal;
-            const fmtToPar = (toPar) => toPar == 0 ? "E" : toPar > 0 ? "+" + toPar : toPar < 0 ? String(toPar) : "";
-            const toPar = inToPar + outToPar;
-            document.getElementById("out-score").innerText = outTotal > 0 ? String(outTotal) : "";
-            document.getElementById("in-score").innerText = inTotal > 0 ? String(inTotal) : "";
-            document.getElementById("total-score").innerText = inTotal > 0 && outTotal > 0 ? String(total) : "";
-            document.getElementById("out-to-par").innerText = outTotal > 0 ? fmtToPar(outToPar) : "";
-            document.getElementById("in-to-par").innerText = inTotal > 0 ? fmtToPar(inToPar) : "";
-            document.getElementById("total-to-par").innerText = outTotal > 0 && inTotal > 0 ? fmtToPar(toPar) : "";
-        }
+            this.updateTotals();
+            ScoreCard.the.saveScoreCard();
+        };
         // set up button click handlers for incr/decr hole score
         document.getElementById("plus").addEventListener("click", () => updateScore(this.loadedHoleNumber, +1));
         document.getElementById("minus").addEventListener("click", () => updateScore(this.loadedHoleNumber, -1));
@@ -325,6 +298,58 @@ class ScoreCard {
             GolfMap.the.easeTo({ zoom, center, bearing });
             Path.the.reset();
         }
+    }
+    updateTotals() {
+        // this assumes the "hole" feature is the first in the array of features for each hole
+        // returns undefined if par is not available
+        const parFor = (holeNumber) => {
+            const holeInfo = Courses.the.loadedHoleInfo.get(holeNumber);
+            return holeInfo?.hole.properties?.par;
+        };
+        // update total score and total to par
+        // toPar becomes NaN if par is unavailable for any hole,
+        // which causes fmtPar to return blank
+        function computeScore(start) {
+            for (var holeNumber = start, total = 0, toPar = 0, i = 0; i < 9; i++, holeNumber++) {
+                const score = Number(document.getElementById(`hole-score-${holeNumber}`).innerText);
+                total += score;
+                if (score > 0)
+                    toPar += score - parFor(holeNumber);
+            }
+            return [total, toPar];
+        }
+        const [outTotal, outToPar] = computeScore(1);
+        const [inTotal, inToPar] = computeScore(10);
+        const total = outTotal + inTotal;
+        const fmtToPar = (toPar) => toPar == 0 ? "E" : toPar > 0 ? "+" + toPar : toPar < 0 ? String(toPar) : "";
+        const toPar = inToPar + outToPar;
+        document.getElementById("out-score").innerText = outTotal > 0 ? String(outTotal) : "";
+        document.getElementById("in-score").innerText = inTotal > 0 ? String(inTotal) : "";
+        document.getElementById("total-score").innerText = inTotal > 0 && outTotal > 0 ? String(total) : "";
+        document.getElementById("out-to-par").innerText = outTotal > 0 ? fmtToPar(outToPar) : "";
+        document.getElementById("in-to-par").innerText = inTotal > 0 ? fmtToPar(inToPar) : "";
+        document.getElementById("total-to-par").innerText = outTotal > 0 && inTotal > 0 ? fmtToPar(toPar) : "";
+    }
+    loadScoreCard() {
+        const scorecard = getAppState("scorecard");
+        if (scorecard) {
+            log("loading scorecard", scorecard);
+            for (const holeNumber in scorecard) {
+                const td = document.getElementById(`hole-score-${holeNumber}`);
+                td.innerText = String(scorecard[holeNumber]);
+            }
+            this.updateTotals();
+        }
+    }
+    saveScoreCard() {
+        const scorecard = {};
+        for (let holeNumber = 1; holeNumber <= 18; holeNumber++) {
+            const td = document.getElementById(`hole-score-${holeNumber}`);
+            if (td.innerText)
+                scorecard[holeNumber] = Number(td.innerText);
+        }
+        log("saving scorecard", scorecard);
+        setAppState("scorecard", scorecard);
     }
     unloadHole() {
         if (this.loadedHoleNumber) {
@@ -720,6 +745,9 @@ class Settings {
         addSetting("Refresh course data", () => {
             log("clearing local storage");
             localStorage.clear();
+        });
+        addSetting("Recall last round", () => {
+            ScoreCard.the.loadScoreCard();
         });
         // manage settings menu display
         var showing = false;

@@ -746,7 +746,7 @@ class Settings {
             log("clearing local storage");
             localStorage.clear();
         });
-        addSetting("Recall last round", () => {
+        addSetting("Resume last round", () => {
             ScoreCard.the.loadScoreCard();
         });
         // manage settings menu display
